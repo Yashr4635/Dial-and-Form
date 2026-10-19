@@ -4,25 +4,28 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#071b16" />
-    <meta name="description" content="A cinematic study of the Sky-Dweller, told in motion." />
-    <title>Sky-Dweller — Time in Motion</title>
+    <meta name="description" content="Atelier Watch — An independent luxury horology discovery and technical comparison platform." />
+    <title>Atelier Watch — Horology in Motion</title>
     <link rel="preload" as="image" href="assets/frames/frame_0001.webp" type="image/webp" />
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
+    <script src="js/api.js" defer></script>
+    <script src="js/ui.js" defer></script>
   </head>
   <body>
     <main>
-      <section class="scroll-story" id="hero" aria-label="Sky-Dweller in motion">
+      <section class="scroll-story" id="hero" aria-label="Atelier watch in motion">
         <div class="sticky-stage">
           <canvas class="watch-canvas" aria-label="Gold watch assembling in a cinematic sequence"></canvas>
           <div class="scene-shade" aria-hidden="true"></div>
 
           <header class="site-header">
-            <a class="wordmark" href="#hero" aria-label="Return to the beginning">ROLEX</a>
+            <a class="wordmark" href="#hero" aria-label="Atelier Watch">ATELIER WATCH</a>
             <nav class="main-nav" aria-label="Main navigation">
-              <a href="#story">The story</a>
-              <a href="#details">Details</a>
-              <a class="nav-cta" href="#closing">Discover</a>
+              <a href="#story">The Story</a>
+              <a href="#details">Craftsmanship</a>
+              <button class="nav-link-btn" type="button" data-open-catalog>Catalog</button>
+              <button class="nav-cta" type="button" data-open-auth id="auth-nav-btn">Sign In</button>
             </nav>
             <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
               <span></span><span></span>
@@ -30,14 +33,17 @@
           </header>
 
           <div class="hero-copy">
-            <p class="eyebrow"><span class="eyebrow-mark"></span> Oyster Perpetual</p>
+            <p class="eyebrow"><span class="eyebrow-mark"></span> Haute Horlogerie</p>
             <h1>Time, in<br /><em>its own orbit.</em></h1>
-            <p class="hero-description">The Sky-Dweller. A considered expression of precision, composed for a world in motion.</p>
-            <a class="text-link" href="#story">Enter the story <span aria-hidden="true">↘</span></a>
+            <p class="hero-description">An architectural study in mechanical precision. Discover curated masterpieces, compare technical calibers, and build your private collection.</p>
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+              <a class="text-link" href="#story">Enter the story <span aria-hidden="true">↘</span></a>
+              <button class="btn-primary" type="button" data-open-catalog style="padding: 10px 18px; font-size: 8px;">Explore Catalog</button>
+            </div>
           </div>
 
           <div class="hero-caption" aria-hidden="true">
-            <span>THE SKY-DWELLER</span>
+            <span>ATELIER HOROLOGY</span>
             <span>FORM / FUNCTION / FLIGHT</span>
           </div>
 
@@ -64,7 +70,7 @@
           </div>
           <div class="story-copy">
             <p class="story-lede">An instrument for those who see the world as one great possibility.</p>
-            <p>Warm gold, a deep green dial and a silhouette that feels at home in every time zone. Each element comes together with intention, balancing clarity with quiet confidence.</p>
+            <p>Warm gold, an olive green sunray dial and a silhouette that feels at home in every time zone. Each element comes together with intention, balancing clarity with quiet confidence.</p>
             <a class="text-link dark-link" href="#details">Discover the details <span aria-hidden="true">↘</span></a>
           </div>
         </div>
@@ -77,32 +83,221 @@
           <p class="eyebrow dark-eyebrow">The composition</p>
           <h2>Every detail<br /><em>has its place.</em></h2>
           <p>From the first glint of gold to the final measured tick, a study in harmony emerges.</p>
+          <div style="margin-top: 24px;">
+            <button class="btn-primary" type="button" data-open-catalog>Browse All Models</button>
+          </div>
         </div>
         <div class="detail-list">
           <article class="detail-item">
             <span class="detail-number">01</span>
-            <div><h3>Golden light</h3><p>Polished surfaces catch the light from every angle, shaping a presence that feels both timeless and distinctly modern.</p></div>
+            <div>
+              <h3>Golden light</h3>
+              <p>18 ct Everose Gold polished surfaces catch the light from every angle, shaping a presence that feels both timeless and distinctly modern.</p>
+            </div>
             <span class="detail-symbol" aria-hidden="true">↗</span>
           </article>
           <article class="detail-item">
             <span class="detail-number">02</span>
-            <div><h3>Deep green</h3><p>A rich dial brings depth to the face, while luminous markers make every glance feel effortless.</p></div>
+            <div>
+              <h3>Deep green</h3>
+              <p>A rich olive green dial brings depth to the face, while Chromalight luminous markers make every glance effortless across 24 hours.</p>
+            </div>
             <span class="detail-symbol" aria-hidden="true">↗</span>
           </article>
           <article class="detail-item">
             <span class="detail-number">03</span>
-            <div><h3>Quiet precision</h3><p>Every component finds its balance in a movement made to keep pace with life across the globe.</p></div>
+            <div>
+              <h3>Quiet precision</h3>
+              <p>The Calibre 9002 Manufacture annual calendar requires only one date correction per year, driven by the patented Saros mechanism.</p>
+            </div>
             <span class="detail-symbol" aria-hidden="true">↗</span>
           </article>
         </div>
       </section>
 
       <footer class="closing-section" id="closing">
-        <p class="eyebrow">The Sky-Dweller</p>
+        <p class="eyebrow">Atelier Watch Platform</p>
         <h2>Make time<br /><em>your own.</em></h2>
-        <a class="footer-link" href="#hero">Return to the beginning <span aria-hidden="true">↑</span></a>
-        <div class="footer-bottom"><span>ROLEX · SKY-DWELLER</span><span>TIME, IN ITS OWN ORBIT</span><span>© 2026</span></div>
+        <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 40px; flex-wrap: wrap;">
+          <button class="btn-primary" type="button" data-open-catalog style="padding: 16px 32px;">Open Watch Discovery</button>
+          <a class="footer-link" href="#hero">Return to the beginning <span aria-hidden="true">↑</span></a>
+        </div>
+        <div class="footer-bottom">
+          <span>ATELIER WATCH · HOROLOGY PLATFORM</span>
+          <span>DISCOVERY / SPECIFICATIONS / COMPARISON</span>
+          <span>SPRING BOOT 3.3 · POSTGRESQL · © 2026</span>
+        </div>
       </footer>
     </main>
+
+    <!-- =====================================================================
+         1. Watch Discovery Catalog Modal
+         ===================================================================== -->
+    <div class="atelier-modal" id="catalog-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-title">
+      <div class="modal-backdrop"></div>
+      <div class="modal-container">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3 id="catalog-title">Horology Collection</h3>
+            <p class="modal-subtitle">Curated Luxury Timepieces & Technical Calibers</p>
+          </div>
+          <button class="modal-close" type="button" aria-label="Close catalog">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="catalog-toolbar">
+            <div class="catalog-search-row">
+              <div class="search-input-wrapper">
+                <input type="search" id="catalog-search" placeholder="Search by model, brand, or caliber..." autocomplete="off" />
+              </div>
+              <select id="catalog-sort" class="catalog-sort-select">
+                <option value="id,desc">Latest Additions</option>
+                <option value="price,asc">Price: Low to High</option>
+                <option value="price,desc">Price: High to Low</option>
+                <option value="brand,asc">Brand: A to Z</option>
+              </select>
+            </div>
+            <div class="catalog-filters" id="category-filters">
+              <!-- Dynamically populated from /api/v1/categories -->
+            </div>
+          </div>
+
+          <div id="catalog-loading" style="text-align: center; padding: 40px 0; display: none;">
+            <p style="font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold);">Loading collection...</p>
+          </div>
+
+          <div id="catalog-empty" style="text-align: center; padding: 60px 0; display: none;">
+            <p style="font-family: var(--serif); font-size: 20px; margin-bottom: 8px;">No matching timepieces found</p>
+            <p style="font-size: 12px; color: rgba(244, 239, 224, 0.6);">Try adjusting your search criteria or selecting another collection.</p>
+          </div>
+
+          <div class="watch-grid" id="catalog-grid">
+            <!-- Dynamically populated from /api/v1/watches -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         2. Watch Detail View Modal
+         ===================================================================== -->
+    <div class="atelier-modal" id="detail-modal" role="dialog" aria-modal="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-container">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3>Technical Dossier</h3>
+            <p class="modal-subtitle">Horological Architecture & Specifications</p>
+          </div>
+          <button class="modal-close" type="button" aria-label="Close details">✕</button>
+        </div>
+        <div class="modal-body" id="detail-content">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         3. Side-by-Side Comparison Matrix Modal
+         ===================================================================== -->
+    <div class="atelier-modal" id="compare-modal" role="dialog" aria-modal="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-container" style="max-width: 1280px;">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3>Horological Comparison Matrix</h3>
+            <p class="modal-subtitle">Direct Specification Comparison</p>
+          </div>
+          <button class="modal-close" type="button" aria-label="Close comparison">✕</button>
+        </div>
+        <div class="modal-body" id="compare-content">
+          <!-- Dynamically populated from /api/v1/watches/compare -->
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         4. Authentication & Wishlist Modal
+         ===================================================================== -->
+    <div class="atelier-modal" id="auth-modal" role="dialog" aria-modal="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-container" style="max-width: 580px;">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3>Collector Account</h3>
+            <p class="modal-subtitle">Curated Access & Saved Watchlists</p>
+          </div>
+          <button class="modal-close" type="button" aria-label="Close authentication">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Sign In</button>
+            <button class="auth-tab" data-tab="register">Register</button>
+            <button class="auth-tab" data-tab="wishlist">My Wishlist</button>
+          </div>
+
+          <!-- Login Tab -->
+          <div id="login-tab-content">
+            <form class="auth-form" id="login-form">
+              <div class="form-error"></div>
+              <div class="form-group">
+                <label for="login-email">Email Address</label>
+                <input type="email" id="login-email" placeholder="collector@atelierwatch.dev" required />
+              </div>
+              <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" placeholder="••••••••" required />
+              </div>
+              <button class="btn-primary" type="submit">Sign In</button>
+              <p style="font-size: 11px; color: rgba(244, 239, 224, 0.5); text-align: center; margin: 10px 0 0;">
+                Demo Credentials: <code>alex@example.com</code> / <code>Password@123</code>
+              </p>
+            </form>
+          </div>
+
+          <!-- Register Tab -->
+          <div id="register-tab-content" style="display: none;">
+            <form class="auth-form" id="register-form">
+              <div class="form-error"></div>
+              <div class="form-group">
+                <label for="reg-name">Full Name</label>
+                <input type="text" id="reg-name" placeholder="e.g. Julian Hayes" required />
+              </div>
+              <div class="form-group">
+                <label for="reg-email">Email Address</label>
+                <input type="email" id="reg-email" placeholder="julian@example.com" required />
+              </div>
+              <div class="form-group">
+                <label for="reg-password">Password (min 8 chars)</label>
+                <input type="password" id="reg-password" placeholder="••••••••" required minlength="8" />
+              </div>
+              <button class="btn-primary" type="submit">Create Account</button>
+            </form>
+          </div>
+
+          <!-- Wishlist Tab -->
+          <div id="wishlist-tab-content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <span style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold);">Saved Timepieces</span>
+              <button id="signout-btn" style="background: transparent; border: 1px solid rgba(244, 239, 224, 0.2); color: rgba(244, 239, 224, 0.7); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 12px; cursor: pointer;">Sign Out</button>
+            </div>
+            <div class="wishlist-grid" id="wishlist-grid">
+              <!-- Dynamically populated from /api/v1/me/wishlist -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         5. Floating Compare Tray
+         ===================================================================== -->
+    <div class="compare-tray" id="compare-tray">
+      <span class="compare-tray-badge" id="compare-count">0</span>
+      <span style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">Watches Selected</span>
+      <button class="btn-primary" id="open-compare-btn" style="padding: 8px 16px; font-size: 9px;">Compare Now</button>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
   </body>
 </html>

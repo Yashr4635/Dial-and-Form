@@ -736,7 +736,7 @@
 
     function renderCart(cart) {
         if (!cart) return;
-        const totalItems = cart.totalItems || (cart.items ? cart.items.reduce((s, i) => s + i.quantity, 0) : 0);
+        const totalItems = cart.totalQuantity || cart.totalItems || (cart.items ? cart.items.reduce((s, i) => s + i.quantity, 0) : 0);
         if (elements.cartNavCount) elements.cartNavCount.textContent = totalItems;
 
         if (!elements.cartItemsContainer) return;
@@ -765,10 +765,10 @@
 
         elements.cartItemsContainer.innerHTML = cart.items.map(item => `
             <div class="cart-item-row" data-cart-item-id="${item.id || item.watchId}">
-                <img src="${item.watchImageUrl || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=400&q=80'}" alt="${item.watchTitle || ''}" class="cart-item-img" />
+                <img src="${item.imageUrl || item.watchImageUrl || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=400&q=80'}" alt="${item.name || item.watchTitle || ''}" class="cart-item-img" />
                 <div>
-                    <span class="cart-item-brand">${item.watchBrand || ''}</span>
-                    <h5 class="cart-item-title">${item.watchTitle || 'Luxury Watch'}</h5>
+                    <span class="cart-item-brand">${item.brand || item.watchBrand || ''}</span>
+                    <h5 class="cart-item-title">${item.name || item.watchTitle || 'Luxury Watch'}</h5>
                     <span style="font-size: 11px; color: rgba(244, 239, 224, 0.6);">${formatCurrency(item.unitPrice)} each</span>
                 </div>
                 <div class="cart-qty-control">

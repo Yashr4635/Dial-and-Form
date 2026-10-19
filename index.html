@@ -25,6 +25,7 @@
               <a href="#story">The Story</a>
               <a href="#details">Craftsmanship</a>
               <button class="nav-link-btn" type="button" data-open-catalog>Catalog</button>
+              <button class="nav-link-btn" type="button" data-open-cart id="cart-nav-btn">Bag (<span id="cart-nav-count">0</span>)</button>
               <button class="nav-cta" type="button" data-open-auth id="auth-nav-btn">Sign In</button>
             </nav>
             <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
@@ -233,6 +234,7 @@
             <button class="auth-tab active" data-tab="login">Sign In</button>
             <button class="auth-tab" data-tab="register">Register</button>
             <button class="auth-tab" data-tab="wishlist">My Wishlist</button>
+            <button class="auth-tab" data-tab="orders">My Orders</button>
           </div>
 
           <!-- Login Tab -->
@@ -249,7 +251,7 @@
               </div>
               <button class="btn-primary" type="submit">Sign In</button>
               <p style="font-size: 11px; color: rgba(244, 239, 224, 0.5); text-align: center; margin: 10px 0 0;">
-                Demo Credentials: <code>alex@example.com</code> / <code>Password@123</code>
+                Demo Credentials: <code>collector@atelierwatch.dev</code> / <code>Admin@123456</code>
               </p>
             </form>
           </div>
@@ -284,12 +286,142 @@
               <!-- Dynamically populated from /api/v1/me/wishlist -->
             </div>
           </div>
+
+          <!-- Orders & Tracking Tab -->
+          <div id="orders-tab-content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <span style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold);">Acquisitions & Deliveries</span>
+              <button class="btn-text" id="refresh-orders-btn" style="font-size: 10px;">Refresh</button>
+            </div>
+            <div class="orders-list" id="orders-list">
+              <!-- Dynamically populated from /api/v1/me/orders -->
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- =====================================================================
-         5. Floating Compare Tray
+         5. Shopping Bag Modal
+         ===================================================================== -->
+    <div class="atelier-modal" id="cart-modal" role="dialog" aria-modal="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-container" style="max-width: 680px;">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3>Your Shopping Bag</h3>
+            <p class="modal-subtitle">Insured White-Glove Horological Delivery</p>
+          </div>
+          <button class="modal-close" type="button" aria-label="Close bag">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="cart-items-container">
+            <!-- Dynamically populated -->
+          </div>
+          <div class="cart-summary" id="cart-summary-section" style="margin-top: 24px; border-top: 1px solid rgba(244, 239, 224, 0.1); padding-top: 16px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: rgba(244, 239, 224, 0.6);">Subtotal</span>
+              <span id="cart-subtotal" style="font-weight: 500; font-family: var(--serif); font-size: 16px;">$0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 12px;">
+              <span style="color: rgba(244, 239, 224, 0.6);">Insured Armored Express</span>
+              <span style="color: var(--gold);">Complimentary ($0)</span>
+            </div>
+            <div style="display: flex; gap: 12px;">
+              <button class="btn-primary" id="btn-proceed-checkout" style="flex: 1;">Proceed to Checkout</button>
+              <button class="btn-secondary" id="btn-clear-cart" style="padding: 12px 18px;">Clear Bag</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         6. Checkout & Payment Modal
+         ===================================================================== -->
+    <div class="atelier-modal" id="checkout-modal" role="dialog" aria-modal="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-container" style="max-width: 720px;">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3>Secure Checkout</h3>
+            <p class="modal-subtitle">Direct Vault Dispatch & Escrow Payment</p>
+          </div>
+          <button class="modal-close" type="button" aria-label="Close checkout">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="checkout-layout">
+            <div class="checkout-address-section">
+              <h4 style="font-family: var(--serif); font-size: 15px; color: var(--gold); margin-bottom: 12px; letter-spacing: 0.05em;">1. Secure Delivery Address</h4>
+              
+              <!-- Saved addresses picker -->
+              <div id="saved-addresses-list" style="margin-bottom: 16px;"></div>
+
+              <form id="checkout-address-form" class="auth-form" style="gap: 12px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label for="ship-name">Recipient Full Name</label>
+                    <input type="text" id="ship-name" placeholder="Alexander Thorne" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="ship-phone">Contact Phone</label>
+                    <input type="tel" id="ship-phone" placeholder="+1-555-019-2834" required />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="ship-street">Street Address</label>
+                  <input type="text" id="ship-street" placeholder="742 Evergreen Terrace" required />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label for="ship-city">City</label>
+                    <input type="text" id="ship-city" placeholder="New York" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="ship-state">State / Province</label>
+                    <input type="text" id="ship-state" placeholder="NY" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="ship-postal">Postal Code</label>
+                    <input type="text" id="ship-postal" placeholder="10021" required />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <div class="checkout-order-review" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(244, 239, 224, 0.1);">
+              <h4 style="font-family: var(--serif); font-size: 15px; color: var(--gold); margin-bottom: 12px; letter-spacing: 0.05em;">2. Horological Escrow & Payment</h4>
+              <div id="checkout-quote-details" style="background: rgba(0,0,0,0.25); padding: 16px; border: 1px solid rgba(244, 239, 224, 0.08); margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;">
+                  <span style="color: rgba(244, 239, 224, 0.6);">Items Subtotal:</span>
+                  <span id="checkout-subtotal" style="font-weight: 500;">$0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;">
+                  <span style="color: rgba(244, 239, 224, 0.6);">Armored Courier & Insurance:</span>
+                  <span style="color: var(--gold);">Complimentary ($0)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 16px; font-family: var(--serif); border-top: 1px solid rgba(244, 239, 224, 0.1); padding-top: 10px; margin-top: 10px;">
+                  <span>Final Total:</span>
+                  <span id="checkout-total" style="color: var(--gold); font-weight: 600;">$0</span>
+                </div>
+              </div>
+
+              <div id="checkout-payment-actions">
+                <button class="btn-primary" id="btn-pay-razorpay" style="width: 100%; padding: 16px; font-size: 11px;">
+                  Authorize Payment with Razorpay (Test Mode)
+                </button>
+                <p style="font-size: 10px; color: rgba(244, 239, 224, 0.45); text-align: center; margin-top: 10px;">
+                  Escrow verified with HMAC-SHA256 signature verification. Real test credentials enabled.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         7. Floating Compare Tray
          ===================================================================== -->
     <div class="compare-tray" id="compare-tray">
       <span class="compare-tray-badge" id="compare-count">0</span>

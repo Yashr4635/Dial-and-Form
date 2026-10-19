@@ -49,7 +49,25 @@
         loginTabContent: document.getElementById("login-tab-content"),
         registerTabContent: document.getElementById("register-tab-content"),
         wishlistTabContent: document.getElementById("wishlist-tab-content"),
-        wishlistGrid: document.getElementById("wishlist-grid")
+        wishlistGrid: document.getElementById("wishlist-grid"),
+
+        // E-Commerce Elements
+        cartModal: document.getElementById("cart-modal"),
+        checkoutModal: document.getElementById("checkout-modal"),
+        cartNavBtn: document.getElementById("cart-nav-btn"),
+        cartNavCount: document.getElementById("cart-nav-count"),
+        cartItemsContainer: document.getElementById("cart-items-container"),
+        cartSubtotal: document.getElementById("cart-subtotal"),
+        btnProceedCheckout: document.getElementById("btn-proceed-checkout"),
+        btnClearCart: document.getElementById("btn-clear-cart"),
+        ordersTabContent: document.getElementById("orders-tab-content"),
+        ordersList: document.getElementById("orders-list"),
+        refreshOrdersBtn: document.getElementById("refresh-orders-btn"),
+        savedAddressesList: document.getElementById("saved-addresses-list"),
+        checkoutAddressForm: document.getElementById("checkout-address-form"),
+        checkoutSubtotal: document.getElementById("checkout-subtotal"),
+        checkoutTotal: document.getElementById("checkout-total"),
+        btnPayRazorpay: document.getElementById("btn-pay-razorpay")
     };
 
     // Helper: Toast Notifications
@@ -192,6 +210,7 @@
                                 <button class="btn-compare ${isCompared ? 'is-active' : ''}" data-compare-id="${watch.id}">
                                     ${isCompared ? 'Compared' : '+ Compare'}
                                 </button>
+                                <button class="btn-primary" style="padding: 6px 10px; font-size: 8px;" data-add-cart="${watch.id}">+ Bag</button>
                             </div>
                         </div>
                     </div>
@@ -204,6 +223,15 @@
             el.addEventListener("click", () => {
                 const slug = el.getAttribute("data-open-detail");
                 openWatchDetail(slug);
+            });
+        });
+
+        elements.catalogGrid.querySelectorAll("[data-add-cart]").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.getAttribute("data-add-cart"));
+                const watch = state.watches.find(w => w.id === id);
+                if (watch) handleAddToCart(watch, 1);
             });
         });
 
@@ -328,7 +356,10 @@
                         </div>
 
                         <div class="detail-actions">
-                            <button class="btn-primary" id="detail-wishlist-btn">
+                            <button class="btn-primary" id="detail-cart-btn">
+                                Add to Bag (${formatCurrency(watch.price, watch.currency)})
+                            </button>
+                            <button class="btn-secondary" id="detail-wishlist-btn">
                                 ${isSaved ? 'In Your Wishlist' : 'Add to Wishlist'}
                             </button>
                             <button class="btn-secondary" id="detail-compare-btn">
@@ -338,6 +369,10 @@
                     </div>
                 </div>
             `;
+
+            document.getElementById("detail-cart-btn").addEventListener("click", () => {
+                handleAddToCart(watch, 1);
+            });
 
             document.getElementById("detail-wishlist-btn").addEventListener("click", () => {
                 toggleWishlist(watch.id);
@@ -685,7 +720,328 @@
     }
 
     // -------------------------------------------------------------------------
-    // 5. Connect Main Page Buttons
+    // 5. E-Commerce: Cart, Checkout, Razorpay & Order Tracking
+    // -------------------------------------------------------------------------
+    let currentCart = null;
+    let selectedAddressId = null;
+
+    async function syncCart() {
+        try {
+            currentCart = await window.atelierApi.getCart();
+            renderCart(currentCart);
+        } catch (err) {
+            console.error("Cart sync error:", err);
+        }
+    }
+
+    function renderCart(cart) {
+        if (!cart) return;
+        const totalItems = cart.totalItems || (cart.items ? cart.items.reduce((s, i) => s + i.quantity, 0) : 0);
+        if (elements.cartNavCount) elements.cartNavCount.textContent = totalItems;
+
+        if (!elements.cartItemsContainer) return;
+
+        if (!cart.items || cart.items.length === 0) {
+            elements.cartItemsContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px 0;">
+                    <p style="font-family: var(--serif); font-size: 18px; color: var(--gold); margin-bottom: 8px;">Your Shopping Bag is Empty</p>
+                    <p style="font-size: 12px; color: rgba(244, 239, 224, 0.5); margin-bottom: 20px;">Explore our curated collection of luxury timepieces.</p>
+                    <button class="btn-primary" id="btn-browse-from-cart" style="font-size: 9px; padding: 10px 18px;">Browse Collection</button>
+                </div>
+            `;
+            if (elements.cartSubtotal) elements.cartSubtotal.textContent = "$0";
+            if (elements.btnProceedCheckout) elements.btnProceedCheckout.disabled = true;
+
+            document.getElementById("btn-browse-from-cart")?.addEventListener("click", () => {
+                closeModal(elements.cartModal);
+                openModal(elements.catalogModal);
+                if (state.watches.length === 0) fetchWatches();
+            });
+            return;
+        }
+
+        if (elements.btnProceedCheckout) elements.btnProceedCheckout.disabled = false;
+        if (elements.cartSubtotal) elements.cartSubtotal.textContent = formatCurrency(cart.subtotal);
+
+        elements.cartItemsContainer.innerHTML = cart.items.map(item => `
+            <div class="cart-item-row" data-cart-item-id="${item.id || item.watchId}">
+                <img src="${item.watchImageUrl || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=400&q=80'}" alt="${item.watchTitle || ''}" class="cart-item-img" />
+                <div>
+                    <span class="cart-item-brand">${item.watchBrand || ''}</span>
+                    <h5 class="cart-item-title">${item.watchTitle || 'Luxury Watch'}</h5>
+                    <span style="font-size: 11px; color: rgba(244, 239, 224, 0.6);">${formatCurrency(item.unitPrice)} each</span>
+                </div>
+                <div class="cart-qty-control">
+                    <button class="cart-qty-btn btn-qty-dec" data-id="${item.id || item.watchId}" data-qty="${item.quantity - 1}">−</button>
+                    <span class="cart-qty-val">${item.quantity}</span>
+                    <button class="cart-qty-btn btn-qty-inc" data-id="${item.id || item.watchId}" data-qty="${item.quantity + 1}">+</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="cart-item-total">${formatCurrency(item.lineTotal || (item.unitPrice * item.quantity))}</span>
+                    <button class="cart-item-remove" data-remove-id="${item.id || item.watchId}" title="Remove">✕</button>
+                </div>
+            </div>
+        `).join("");
+
+        // Attach listeners
+        elements.cartItemsContainer.querySelectorAll(".btn-qty-dec, .btn-qty-inc").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = parseInt(btn.getAttribute("data-id"));
+                const qty = parseInt(btn.getAttribute("data-qty"));
+                try {
+                    currentCart = await window.atelierApi.updateCartItem(id, qty);
+                    renderCart(currentCart);
+                } catch (e) {
+                    showToast(e.message || "Failed to update quantity", "error");
+                }
+            });
+        });
+
+        elements.cartItemsContainer.querySelectorAll(".cart-item-remove").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = parseInt(btn.getAttribute("data-remove-id"));
+                try {
+                    currentCart = await window.atelierApi.removeFromCart(id);
+                    renderCart(currentCart);
+                    showToast("Item removed from bag");
+                } catch (e) {
+                    showToast(e.message || "Failed to remove item", "error");
+                }
+            });
+        });
+    }
+
+    async function handleAddToCart(watch, quantity = 1) {
+        try {
+            currentCart = await window.atelierApi.addToCart(watch, quantity);
+            renderCart(currentCart);
+            showToast(`Added ${watch.brand || ''} ${watch.name || watch.title} to Shopping Bag`);
+            openModal(elements.cartModal);
+        } catch (err) {
+            showToast(err.message || "Could not add to bag", "error");
+        }
+    }
+
+    if (elements.btnClearCart) {
+        elements.btnClearCart.addEventListener("click", async () => {
+            try {
+                currentCart = await window.atelierApi.clearCart();
+                renderCart(currentCart);
+                showToast("Shopping bag cleared");
+            } catch (err) {
+                showToast(err.message || "Could not clear bag", "error");
+            }
+        });
+    }
+
+    // Checkout Flow
+    if (elements.btnProceedCheckout) {
+        elements.btnProceedCheckout.addEventListener("click", async () => {
+            if (!window.atelierApi.token) {
+                showToast("Please sign in or create an account to proceed with secure vault checkout", "info");
+                closeModal(elements.cartModal);
+                openModal(elements.authModal);
+                document.querySelector(".auth-tab[data-tab='login']")?.click();
+                return;
+            }
+
+            closeModal(elements.cartModal);
+            openModal(elements.checkoutModal);
+            await setupCheckoutModal();
+        });
+    }
+
+    async function setupCheckoutModal() {
+        try {
+            const addresses = await window.atelierApi.getAddresses();
+            if (elements.savedAddressesList) {
+                if (addresses && addresses.length > 0) {
+                    selectedAddressId = addresses[0].id;
+                    elements.savedAddressesList.innerHTML = `
+                        <div style="font-size: 11px; color: var(--gold); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.1em;">Saved Shipping Destinations:</div>
+                        ${addresses.map((a, idx) => `
+                            <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 12px; cursor: pointer;">
+                                <input type="radio" name="selected_addr" value="${a.id}" ${idx === 0 ? 'checked' : ''} style="margin-top: 3px;" />
+                                <div>
+                                    <strong style="color: #fff;">${a.recipientName}</strong> (${a.phone})<br/>
+                                    <span style="color: rgba(244, 239, 224, 0.7);">${a.streetAddress}${a.apartmentSuite ? ', ' + a.apartmentSuite : ''}, ${a.city}, ${a.state} ${a.postalCode}</span>
+                                </div>
+                            </label>
+                        `).join("")}
+                    `;
+                    elements.savedAddressesList.querySelectorAll("input[name='selected_addr']").forEach(radio => {
+                        radio.addEventListener("change", (e) => {
+                            selectedAddressId = parseInt(e.target.value);
+                            updateCheckoutQuote(selectedAddressId);
+                        });
+                    });
+                } else {
+                    elements.savedAddressesList.innerHTML = `<p style="font-size: 11px; color: rgba(244, 239, 224, 0.5); margin-bottom: 10px;">Please enter your delivery destination details below:</p>`;
+                }
+            }
+
+            if (selectedAddressId) {
+                await updateCheckoutQuote(selectedAddressId);
+            } else if (currentCart) {
+                if (elements.checkoutSubtotal) elements.checkoutSubtotal.textContent = formatCurrency(currentCart.subtotal);
+                if (elements.checkoutTotal) elements.checkoutTotal.textContent = formatCurrency(currentCart.subtotal);
+            }
+        } catch (e) {
+            console.error("Setup checkout error:", e);
+        }
+    }
+
+    async function updateCheckoutQuote(addressId) {
+        try {
+            const quote = await window.atelierApi.getCheckoutQuote(addressId);
+            if (elements.checkoutSubtotal) elements.checkoutSubtotal.textContent = formatCurrency(quote.subtotal);
+            if (elements.checkoutTotal) elements.checkoutTotal.textContent = formatCurrency(quote.totalAmount);
+        } catch (e) {
+            console.error("Quote error:", e);
+        }
+    }
+
+    // Razorpay Payment Action
+    if (elements.btnPayRazorpay) {
+        elements.btnPayRazorpay.addEventListener("click", async () => {
+            elements.btnPayRazorpay.disabled = true;
+            elements.btnPayRazorpay.textContent = "Securing Escrow Vault Order...";
+
+            try {
+                let addressId = selectedAddressId;
+
+                // If no saved address selected, save from form
+                if (!addressId) {
+                    const recipientName = document.getElementById("ship-name").value.trim() || "Alexander Thorne";
+                    const phone = document.getElementById("ship-phone").value.trim() || "+1-555-019-2834";
+                    const street = document.getElementById("ship-street").value.trim() || "742 Evergreen Terrace";
+                    const city = document.getElementById("ship-city").value.trim() || "New York";
+                    const stateName = document.getElementById("ship-state").value.trim() || "NY";
+                    const postal = document.getElementById("ship-postal").value.trim() || "10021";
+
+                    const savedAddr = await window.atelierApi.saveAddress({
+                        recipientName,
+                        phone,
+                        streetAddress: street,
+                        apartmentSuite: "Penthouse Suite",
+                        city,
+                        state: stateName,
+                        postalCode: postal,
+                        country: "United States",
+                        isDefault: true
+                    });
+                    addressId = savedAddr.id;
+                }
+
+                // 1. Create Order on Backend (Atomic Stock Check & Deduction)
+                elements.btnPayRazorpay.textContent = "Reserving Inventory...";
+                const orderData = await window.atelierApi.createOrder(addressId);
+                const orderRef = orderData.orderReference;
+
+                // 2. Initialize Razorpay Payment Gateway Order
+                elements.btnPayRazorpay.textContent = "Connecting Razorpay Gateway...";
+                const rzpOrder = await window.atelierApi.createRazorpayOrder(orderRef);
+
+                // 3. Simulated/Test Razorpay Payment Verification
+                elements.btnPayRazorpay.textContent = "Verifying HMAC-SHA256 Signature...";
+                const simulatedPaymentId = "pay_test_" + Date.now();
+                
+                // Call verification endpoint
+                await window.atelierApi.verifyPayment({
+                    orderReference: orderRef,
+                    razorpayOrderId: rzpOrder.razorpayOrderId,
+                    razorpayPaymentId: simulatedPaymentId,
+                    razorpaySignature: "simulated_valid_test_signature"
+                });
+
+                showToast(`Order ${orderRef} Confirmed! Armored courier tracking assigned.`, "info");
+                await window.atelierApi.clearCart();
+                await syncCart();
+
+                closeModal(elements.checkoutModal);
+                openModal(elements.authModal);
+                document.querySelector(".auth-tab[data-tab='orders']")?.click();
+            } catch (err) {
+                showToast(err.message || "Payment authorization failed", "error");
+            } finally {
+                elements.btnPayRazorpay.disabled = false;
+                elements.btnPayRazorpay.textContent = "Authorize Payment with Razorpay (Test Mode)";
+            }
+        });
+    }
+
+    // Orders History & Tracking
+    async function loadUserOrders() {
+        if (!elements.ordersList) return;
+        elements.ordersList.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--gold); font-size: 11px;">Loading horological acquisitions...</div>`;
+
+        try {
+            const orders = await window.atelierApi.getUserOrders();
+            renderUserOrders(orders);
+        } catch (e) {
+            elements.ordersList.innerHTML = `<div style="text-align: center; padding: 20px; color: #e06c75; font-size: 12px;">Failed to load order history.</div>`;
+        }
+    }
+
+    function renderUserOrders(orders) {
+        if (!elements.ordersList) return;
+        if (!orders || orders.length === 0) {
+            elements.ordersList.innerHTML = `
+                <div style="text-align: center; padding: 30px 0;">
+                    <p style="font-family: var(--serif); font-size: 16px; margin-bottom: 6px;">No Private Acquisitions Yet</p>
+                    <p style="font-size: 11px; color: rgba(244, 239, 224, 0.5);">Your confirmed luxury orders and white-glove shipments will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+
+        elements.ordersList.innerHTML = orders.map(ord => `
+            <div class="order-card">
+                <div class="order-header-row">
+                    <div>
+                        <span class="order-ref">${ord.orderReference}</span>
+                        <div style="font-size: 10px; color: rgba(244, 239, 224, 0.5); margin-top: 2px;">
+                            ${new Date(ord.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                        </div>
+                    </div>
+                    <div>
+                        <span class="order-status-badge status-${ord.status}">${ord.status.replace("_", " ")}</span>
+                    </div>
+                </div>
+
+                <div style="margin: 12px 0;">
+                    ${ord.items ? ord.items.map(it => `
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                            <span>${it.watchBrand || ''} <strong>${it.watchTitle}</strong> × ${it.quantity}</span>
+                            <span style="color: var(--gold);">${formatCurrency(it.lineTotal)}</span>
+                        </div>
+                    `).join("") : ''}
+                </div>
+
+                <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(244, 239, 224, 0.08); padding-top: 8px; font-size: 13px;">
+                    <span style="color: rgba(244, 239, 224, 0.6);">Total Amount</span>
+                    <strong style="color: #fff; font-family: var(--serif);">${formatCurrency(ord.totalAmount)}</strong>
+                </div>
+
+                ${ord.trackingNumber ? `
+                    <div class="order-tracking-box">
+                        <div>
+                            <span style="color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-size: 9px; display: block;">Insured Armored Dispatch</span>
+                            <span style="font-family: monospace; font-size: 12px; color: #fff;">${ord.trackingNumber}</span>
+                        </div>
+                        <span style="font-size: 10px; color: rgba(244, 239, 224, 0.7);">${ord.shipmentStatus || 'In Transit via Atelier Express'}</span>
+                    </div>
+                ` : ''}
+            </div>
+        `).join("");
+    }
+
+    if (elements.refreshOrdersBtn) {
+        elements.refreshOrdersBtn.addEventListener("click", loadUserOrders);
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. Connect Main Page Buttons
     // -------------------------------------------------------------------------
     elements.openCatalogBtns.forEach(btn => {
         btn.addEventListener("click", (e) => {
@@ -707,9 +1063,36 @@
         });
     });
 
+    document.querySelectorAll("[data-open-cart]").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            openModal(elements.cartModal);
+            syncCart();
+        });
+    });
+
+    // Auth Tabs Switching
+    elements.authTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            elements.authTabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            const target = tab.getAttribute("data-tab");
+
+            if (elements.loginTabContent) elements.loginTabContent.style.display = target === "login" ? "block" : "none";
+            if (elements.registerTabContent) elements.registerTabContent.style.display = target === "register" ? "block" : "none";
+            if (elements.wishlistTabContent) elements.wishlistTabContent.style.display = target === "wishlist" ? "block" : "none";
+            if (elements.ordersTabContent) {
+                elements.ordersTabContent.style.display = target === "orders" ? "block" : "none";
+                if (target === "orders") loadUserOrders();
+            }
+        });
+    });
+
     // Init Lifecycle
     loadCategories();
     fetchWatches();
     updateCompareTray();
     initUserSession();
+    syncCart();
 })();
+

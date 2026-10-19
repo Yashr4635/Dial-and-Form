@@ -31,6 +31,21 @@ public class Watch {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    @Column(name = "reference_number", length = 100)
+    private String referenceNumber;
+
+    @Column(name = "retail_price", precision = 12, scale = 2)
+    private BigDecimal retailPrice;
+
+    @Column(name = "stock_quantity", nullable = false)
+    private Integer stockQuantity = 5;
+
+    @Column(name = "warranty_years")
+    private Integer warrantyYears = 5;
+
+    @Column(name = "provenance_notes", columnDefinition = "TEXT")
+    private String provenanceNotes;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
@@ -137,6 +152,16 @@ public class Watch {
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     public boolean isFeatured() { return featured; }
     public void setFeatured(boolean featured) { this.featured = featured; }
+    public String getReferenceNumber() { return referenceNumber; }
+    public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
+    public BigDecimal getRetailPrice() { return retailPrice; }
+    public void setRetailPrice(BigDecimal retailPrice) { this.retailPrice = retailPrice; }
+    public Integer getStockQuantity() { return stockQuantity; }
+    public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
+    public Integer getWarrantyYears() { return warrantyYears; }
+    public void setWarrantyYears(Integer warrantyYears) { this.warrantyYears = warrantyYears; }
+    public String getProvenanceNotes() { return provenanceNotes; }
+    public void setProvenanceNotes(String provenanceNotes) { this.provenanceNotes = provenanceNotes; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public Instant getCreatedAt() { return createdAt; }

@@ -146,6 +146,153 @@ class AtelierApiClient {
     async removeFromWishlist(watchId) {
         return this.request(`/me/wishlist/${watchId}`, { method: "DELETE" });
     }
+
+    // E-Commerce: Cart
+    async getCart() {
+        if (!this.token) {
+            // LocalStorage fallback for guests
+            const guestCart = JSON.parse(localStorage.getItem("atelier_guest_cart") || "[]");
+            const items = guestCart.map(item => ({
+                id: item.watchId,
+                watchId: item.watchId,
+                watchTitle: item.title,
+                watchBrand: item.brand,
+                watchImageUrl: item.imageUrl,
+                unitPrice: item.price,
+                quantity: item.quantity,
+                lineTotal: (item.price * item.quantity).toFixed(2)
+            }));
+            const subtotal = items.reduce((sum, it) => sum + (it.unitPrice * it.quantity), 0);
+            return {
+                id: null,
+                items: items,
+                subtotal: subtotal.toFixed(2),
+                totalItems: items.reduce((sum, it) => sum + it.quantity, 0)
+            };
+        }
+        return this.request("/cart");
+    }
+
+    async addToCart(watch, quantity = 1) {
+        if (!this.token) {
+            const guestCart = JSON.parse(localStorage.getItem("atelier_guest_cart") || "[]");
+            const existing = guestCart.find(i => i.watchId === watch.id);
+            if (existing) {
+                existing.quantity += quantity;
+            } else {
+                guestCart.push({
+                    watchId: watch.id,
+                    title: watch.title,
+                    brand: watch.brand,
+                    imageUrl: watch.imageUrl,
+                    price: watch.retailPrice || watch.price,
+                    quantity: quantity
+                });
+            }
+            localStorage.setItem("atelier_guest_cart", JSON.stringify(guestCart));
+            return this.getCart();
+        }
+        return this.request("/cart/items", {
+            method: "POST",
+            body: JSON.stringify({ watchId: watch.id, quantity })
+        });
+    }
+
+    async updateCartItem(itemId, quantity) {
+        if (!this.token) {
+            let guestCart = JSON.parse(localStorage.getItem("atelier_guest_cart") || "[]");
+            if (quantity <= 0) {
+                guestCart = guestCart.filter(i => i.watchId !== itemId);
+            } else {
+                const item = guestCart.find(i => i.watchId === itemId);
+                if (item) item.quantity = quantity;
+            }
+            localStorage.setItem("atelier_guest_cart", JSON.stringify(guestCart));
+            return this.getCart();
+        }
+        return this.request(`/cart/items/${itemId}`, {
+            method: "PUT",
+            body: JSON.stringify({ quantity })
+        });
+    }
+
+    async removeFromCart(itemId) {
+        if (!this.token) {
+            let guestCart = JSON.parse(localStorage.getItem("atelier_guest_cart") || "[]");
+            guestCart = guestCart.filter(i => i.watchId !== itemId);
+            localStorage.setItem("atelier_guest_cart", JSON.stringify(guestCart));
+            return this.getCart();
+        }
+        return this.request(`/cart/items/${itemId}`, {
+            method: "DELETE"
+        });
+    }
+
+    async clearCart() {
+        if (!this.token) {
+            localStorage.removeItem("atelier_guest_cart");
+            return { items: [], subtotal: 0, totalItems: 0 };
+        }
+        return this.request("/cart", { method: "DELETE" });
+    }
+
+    // E-Commerce: Addresses
+    async getAddresses() {
+        if (!this.token) return [];
+        return this.request("/me/addresses");
+    }
+
+    async saveAddress(addressData) {
+        return this.request("/me/addresses", {
+            method: "POST",
+            body: JSON.stringify(addressData)
+        });
+    }
+
+    // E-Commerce: Checkout & Orders
+    async getCheckoutQuote(addressId) {
+        return this.request(`/checkout/quote?addressId=${addressId}`);
+    }
+
+    async createOrder(addressId) {
+        return this.request("/checkout/orders", {
+            method: "POST",
+            body: JSON.stringify({ addressId })
+        });
+    }
+
+    async createRazorpayOrder(orderReference) {
+        return this.request(`/payments/razorpay/create-order?orderReference=${encodeURIComponent(orderReference)}`, {
+            method: "POST"
+        });
+    }
+
+    async verifyPayment(verificationData) {
+        return this.request("/payments/razorpay/verify", {
+            method: "POST",
+            body: JSON.stringify(verificationData)
+        });
+    }
+
+    async getUserOrders() {
+        if (!this.token) return [];
+        return this.request("/me/orders");
+    }
+
+    async getOrderByReference(orderReference) {
+        return this.request(`/me/orders/${encodeURIComponent(orderReference)}`);
+    }
+
+    async getAdminOrders(page = 0, size = 20) {
+        return this.request(`/admin/orders?page=${page}&size=${size}`);
+    }
+
+    async updateAdminOrderStatus(orderReference, status) {
+        return this.request(`/admin/orders/${encodeURIComponent(orderReference)}/status?status=${encodeURIComponent(status)}`, {
+            method: "PUT"
+        });
+    }
 }
 
 window.atelierApi = new AtelierApiClient();
+

@@ -894,3 +894,153 @@ body.modal-open { overflow: hidden; }
   .wishlist-card-actions { grid-column: 1 / -1; justify-content: flex-end; }
 }
 
+/* ==========================================================================
+   E-Commerce: Cart, Checkout & Orders UI
+   ========================================================================== */
+.cart-item-row {
+  display: grid;
+  grid-template-columns: 70px 1fr auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(244, 239, 224, 0.08);
+}
+
+.cart-item-img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(244, 239, 224, 0.1);
+}
+
+.cart-item-title {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.cart-item-brand {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+
+.cart-qty-control {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(244, 239, 224, 0.2);
+}
+
+.cart-qty-btn {
+  background: transparent;
+  border: none;
+  color: var(--paper);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.cart-qty-btn:hover {
+  background: rgba(244, 239, 224, 0.1);
+}
+
+.cart-qty-val {
+  padding: 0 8px;
+  font-size: 12px;
+  color: #fff;
+}
+
+.cart-item-total {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--gold);
+  text-align: right;
+  min-width: 80px;
+}
+
+.cart-item-remove {
+  background: transparent;
+  border: none;
+  color: rgba(244, 239, 224, 0.4);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+
+.cart-item-remove:hover {
+  color: #e06c75;
+}
+
+/* Order Card */
+.order-card {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(244, 239, 224, 0.08);
+  padding: 18px;
+  margin-bottom: 16px;
+  border-radius: 2px;
+}
+
+.order-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(244, 239, 224, 0.06);
+}
+
+.order-ref {
+  font-family: var(--serif);
+  font-size: 14px;
+  color: #fff;
+  letter-spacing: 0.05em;
+}
+
+.order-status-badge {
+  padding: 3px 8px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  border-radius: 2px;
+}
+
+.status-CONFIRMED, .status-PAID {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.status-PENDING_PAYMENT {
+  background: rgba(241, 196, 15, 0.15);
+  color: #f1c40f;
+  border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+.status-SHIPPED, .status-ORDER_PROCESSED {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.order-tracking-box {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(200, 169, 126, 0.08);
+  border: 1px dashed rgba(200, 169, 126, 0.25);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+

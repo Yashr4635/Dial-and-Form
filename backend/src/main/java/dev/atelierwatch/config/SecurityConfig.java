@@ -47,12 +47,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/watches/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/payments/webhook").permitAll()
+                        .requestMatchers("/api/v1/payments/razorpay/simulate-signature").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         // Admin endpoints
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        // User protected endpoints
+                        // Authenticated e-commerce and customer endpoints
+                        .requestMatchers("/api/v1/cart/**").authenticated()
+                        .requestMatchers("/api/v1/checkout/**").authenticated()
+                        .requestMatchers("/api/v1/payments/**").authenticated()
                         .requestMatchers("/api/v1/me/**", "/api/v1/users/me").authenticated()
                         .anyRequest().authenticated()
                 )

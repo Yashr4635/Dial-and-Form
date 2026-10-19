@@ -5,7 +5,7 @@ WORKDIR /workspace
 # Copy maven wrapper and pom.xml
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-RUN ./mvnw dependency:go-offline -B
+RUN chmod +x ./mvnw && ./mvnw dependency:go-offline -B
 
 # Copy source code and build production jar
 COPY src/ src/

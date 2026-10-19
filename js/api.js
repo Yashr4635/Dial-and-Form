@@ -2,7 +2,10 @@
  * Atelier Watch API Client
  * Connects vanilla frontend to Spring Boot 3.3 REST API
  */
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = window.ATELIER_API_URL || 
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
+        ? "http://localhost:8080/api/v1" 
+        : "/api/v1");
 
 class AtelierApiClient {
     constructor() {

@@ -112,8 +112,8 @@ INSERT INTO watches (
 -- 'Collector@123456' => $2a$10$w4r6Q5eL.l79gq1pQo51gO7d2rKzK7K7y1I6Z9v0XvXw5xXzXxXx.
 -- We use a known standard BCrypt hash for "Admin@123456" ($2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt2sW2C)
 INSERT INTO users (display_name, email, password_hash, role) VALUES
-('Horology Administrator', 'admin@atelierwatch.dev', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt2sW2C', 'ROLE_ADMIN'),
-('Watch Collector', 'collector@atelierwatch.dev', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt2sW2C', 'ROLE_USER');
+('Horology Administrator', 'admin@atelierwatch.dev', '$2a$10$WB7F4QfZLYy.O5LBXe4NEOmcTbEsT6JiLuEhewedQQ3moGFDyw1q6', 'ROLE_ADMIN'),
+('Watch Collector', 'collector@atelierwatch.dev', '$2a$10$WB7F4QfZLYy.O5LBXe4NEOmcTbEsT6JiLuEhewedQQ3moGFDyw1q6', 'ROLE_USER');
 
 -- 4. Initial Wishlist (Demo user saved Sky-Dweller and Royal Oak)
 INSERT INTO wishlist_items (user_id, watch_id) VALUES

@@ -13,6 +13,7 @@ import dev.atelierwatch.ecommerce.repository.PaymentRepository;
 import dev.atelierwatch.ecommerce.repository.ShipmentRepository;
 import dev.atelierwatch.watches.model.Watch;
 import dev.atelierwatch.watches.repository.WatchRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -39,6 +40,7 @@ class PaymentSimulationSafetyTest {
     @Autowired private OrderRepository orderRepository;
     @Autowired private PaymentRepository paymentRepository;
     @Autowired private ShipmentRepository shipmentRepository;
+    @Autowired private EntityManager entityManager;
 
     @Test
     @Transactional
@@ -74,6 +76,12 @@ class PaymentSimulationSafetyTest {
                         .content(objectMapper.writeValueAsString(new CreateOrderRequest(addressId))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
+
+        // MockMvc requests share this test's outer transaction. Flush and clear at the
+        // order boundary so orphan removal behaves as it does between real HTTP requests.
+        entityManager.flush();
+        entityManager.clear();
+
         String firstReference = objectMapper.readTree(firstOrderResponse).path("data").path("orderReference").asText();
 
         String gatewayResponse = mockMvc.perform(post("/api/v1/payments/razorpay/create-order")

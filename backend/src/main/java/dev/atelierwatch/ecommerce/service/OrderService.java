@@ -7,14 +7,18 @@ import dev.atelierwatch.ecommerce.model.*;
 import dev.atelierwatch.ecommerce.repository.*;
 import dev.atelierwatch.watches.model.Watch;
 import dev.atelierwatch.watches.repository.WatchRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.time.Year;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -28,21 +32,28 @@ public class OrderService {
     private final WatchRepository watchRepository;
     private final UserRepository userRepository;
     private final ShipmentRepository shipmentRepository;
+    private final PaymentRepository paymentRepository;
     private final SecureRandom random = new SecureRandom();
+
+    @Value("${app.razorpay.simulation-enabled:false}")
+    private boolean simulationEnabled;
 
     public OrderService(OrderRepository orderRepository, CartRepository cartRepository,
                         ShippingAddressRepository addressRepository, WatchRepository watchRepository,
-                        UserRepository userRepository, ShipmentRepository shipmentRepository) {
+                        UserRepository userRepository, ShipmentRepository shipmentRepository,
+                        PaymentRepository paymentRepository) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.addressRepository = addressRepository;
         this.watchRepository = watchRepository;
         this.userRepository = userRepository;
         this.shipmentRepository = shipmentRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     @Transactional(readOnly = true)
     public CheckoutQuoteResponse getQuote(Long userId, Long addressId) {
+        requireCheckoutEnabled();
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Cart is empty"));
 
@@ -57,11 +68,12 @@ public class OrderService {
         int totalItems = 0;
         for (CartItem item : cart.getItems()) {
             Watch watch = item.getWatch();
+            requirePurchasable(watch, item.getQuantity());
             subtotal = subtotal.add(watch.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
             totalItems += item.getQuantity();
         }
 
-        BigDecimal shippingFee = BigDecimal.ZERO; // Complimentary armored courier delivery
+        BigDecimal shippingFee = BigDecimal.ZERO; // Demo-only until shipping rates are configured.
         BigDecimal total = subtotal.add(shippingFee);
 
         return new CheckoutQuoteResponse(
@@ -71,6 +83,7 @@ public class OrderService {
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public OrderResponse createOrder(Long userId, CreateOrderRequest req) {
+        requireCheckoutEnabled();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + userId));
 
@@ -90,6 +103,7 @@ public class OrderService {
             Watch watch = watchRepository.findById(item.getWatch().getId())
                     .orElseThrow(() -> new NoSuchElementException("Watch not found: " + item.getWatch().getId()));
 
+            requirePurchasable(watch, item.getQuantity());
             if (watch.getStockQuantity() < item.getQuantity()) {
                 throw new IllegalArgumentException("Insufficient inventory for '" + watch.getName() + "'. Available: " + watch.getStockQuantity() + ", requested: " + item.getQuantity());
             }
@@ -177,22 +191,52 @@ public class OrderService {
     private OrderResponse enrichWithShipment(Order order) {
         var base = OrderResponse.from(order);
         var shipmentOpt = shipmentRepository.findByOrderId(order.getId());
-        if (shipmentOpt.isPresent()) {
-            Shipment s = shipmentOpt.get();
-            return new OrderResponse(
-                    base.id(), base.orderReference(), base.status(),
-                    base.subtotal(), base.shippingFee(), base.totalAmount(), base.currency(),
-                    base.shippingName(), base.shippingPhone(), base.shippingAddressLine1(), base.shippingAddressLine2(),
-                    base.shippingCity(), base.shippingState(), base.shippingPostalCode(), base.shippingCountry(),
-                    base.items(), s.getTrackingNumber(), s.getTrackingUrl(), s.getStatus(), base.createdAt()
-            );
-        }
-        return base;
+        String paymentStatus = paymentRepository.findByOrderId(order.getId())
+                .map(payment -> payment.getStatus())
+                .orElse("NOT_STARTED");
+        Shipment shipment = shipmentOpt.orElse(null);
+        return new OrderResponse(
+                base.id(), base.orderReference(), base.status(), paymentStatus,
+                base.subtotal(), base.shippingFee(), base.totalAmount(), base.currency(),
+                base.shippingName(), base.shippingPhone(), base.shippingAddressLine1(), base.shippingAddressLine2(),
+                base.shippingCity(), base.shippingState(), base.shippingPostalCode(), base.shippingCountry(),
+                base.items(), shipment != null ? shipment.getTrackingNumber() : null,
+                shipment != null ? shipment.getTrackingUrl() : null,
+                shipment != null ? shipment.getStatus() : null, base.createdAt()
+        );
     }
 
     private String generateOrderReference() {
-        int year = 2026;
-        int code = 10000 + random.nextInt(90000);
-        return "AW-" + year + "-" + code;
+        int year = Year.now().getValue();
+        for (int attempt = 0; attempt < 10; attempt++) {
+            int code = 10000 + random.nextInt(90000);
+            String reference = "AW-" + year + "-" + code;
+            if (!orderRepository.existsByOrderReference(reference)) return reference;
+        }
+        throw new IllegalStateException("Could not allocate a unique order reference");
+    }
+
+    private void requirePurchasable(Watch watch, int quantity) {
+        if (!"Rolex".equals(watch.getBrand()) || !"PUBLISHED".equals(watch.getStatus())) {
+            throw new IllegalArgumentException("This catalog item is no longer available for checkout");
+        }
+        if (watch.getPrice() == null || watch.getPrice().signum() <= 0) {
+            throw new IllegalArgumentException("Checkout is unavailable until a verified selling price is configured");
+        }
+        if (watch.getStockQuantity() == null || watch.getStockQuantity() <= 0) {
+            throw new IllegalArgumentException("Checkout is unavailable until inventory is configured");
+        }
+        if (watch.getStockQuantity() < quantity) {
+            throw new IllegalArgumentException("Insufficient inventory for '" + watch.getName() + "'. Available: " + watch.getStockQuantity() + ", requested: " + quantity);
+        }
+    }
+
+    private void requireCheckoutEnabled() {
+        if (!simulationEnabled) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Checkout is unavailable because no live payment gateway is configured"
+            );
+        }
     }
 }

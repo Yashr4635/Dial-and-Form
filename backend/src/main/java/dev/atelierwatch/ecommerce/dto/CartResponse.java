@@ -7,5 +7,6 @@ public record CartResponse(
     Long id,
     List<CartItemResponse> items,
     BigDecimal subtotal,
-    int totalQuantity
+    int totalQuantity,
+    boolean checkoutAvailable
 ) {}

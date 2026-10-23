@@ -34,7 +34,34 @@ public record WatchDetailResponse(
     boolean featured,
     String status,
     Instant createdAt,
-    Instant updatedAt
+    Instant updatedAt,
+    String collectionName,
+    String caseTypeDescription,
+    String bezelDescription,
+    String caseBackDescription,
+    String windingCrownDescription,
+    String caseDiameterText,
+    String waterResistanceText,
+    String powerReserveText,
+    String precision,
+    String oscillator,
+    String winding,
+    String braceletType,
+    String claspDescription,
+    String dialDetails,
+    String certification,
+    String sourcePdf,
+    String sourceFilenameProductCode,
+    Integer sourceCoverPage,
+    Integer sourceDescriptionPage,
+    String sourceSpecificationPages,
+    Integer sourceImagePage,
+    String sourceImageObject,
+    String imageSourcePath,
+    String imageSha256,
+    String imageRightsStatus,
+    String imageVerificationStatus,
+    boolean purchasable
 ) {
     public static WatchDetailResponse from(Watch watch) {
         return new WatchDetailResponse(
@@ -67,7 +94,37 @@ public record WatchDetailResponse(
             watch.isFeatured(),
             watch.getStatus(),
             watch.getCreatedAt(),
-            watch.getUpdatedAt()
+            watch.getUpdatedAt(),
+            watch.getCollectionName(),
+            watch.getCaseTypeDescription(),
+            watch.getBezelDescription(),
+            watch.getCaseBackDescription(),
+            watch.getWindingCrownDescription(),
+            watch.getCaseDiameterText(),
+            watch.getWaterResistanceText(),
+            watch.getPowerReserveText(),
+            watch.getPrecision(),
+            watch.getOscillator(),
+            watch.getWinding(),
+            watch.getBraceletType(),
+            watch.getClaspDescription(),
+            watch.getDialDetails(),
+            watch.getCertification(),
+            watch.getSourcePdf(),
+            watch.getSourceFilenameProductCode(),
+            watch.getSourceCoverPage(),
+            watch.getSourceDescriptionPage(),
+            watch.getSourceSpecificationPages(),
+            watch.getSourceImagePage(),
+            watch.getSourceImageObject(),
+            watch.getImageSourcePath(),
+            watch.getImageSha256(),
+            watch.getImageRightsStatus(),
+            watch.getImageVerificationStatus(),
+            "PUBLISHED".equals(watch.getStatus())
+                    && "Rolex".equals(watch.getBrand())
+                    && watch.getPrice() != null && watch.getPrice().signum() > 0
+                    && watch.getStockQuantity() != null && watch.getStockQuantity() > 0
         );
     }
 }

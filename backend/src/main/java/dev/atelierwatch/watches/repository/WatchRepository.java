@@ -18,10 +18,14 @@ public interface WatchRepository extends JpaRepository<Watch, Long>, JpaSpecific
 
     Optional<Watch> findBySlug(String slug);
 
-    List<Watch> findByFeaturedTrueAndStatus(String status);
+    Optional<Watch> findBySlugAndStatusAndBrandIgnoreCase(String slug, String status, String brand);
 
-    @Query("SELECT w FROM Watch w WHERE w.status = 'PUBLISHED' " +
-           "AND (:search IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.brand) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+    List<Watch> findByFeaturedTrueAndStatusAndBrandIgnoreCase(String status, String brand);
+
+    @Query("SELECT w FROM Watch w WHERE w.status = 'PUBLISHED' AND LOWER(w.brand) = 'rolex' " +
+           "AND (:search IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.brand) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.referenceNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.caliber) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:brand IS NULL OR LOWER(w.brand) = LOWER(:brand)) " +
+           "AND (:collectionSlug IS NULL OR w.collectionSlug = :collectionSlug) " +
            "AND (:categorySlug IS NULL OR w.category.slug = :categorySlug) " +
            "AND (:movementType IS NULL OR w.movementType = :movementType) " +
            "AND (:caseMaterial IS NULL OR LOWER(w.caseMaterial) LIKE LOWER(CONCAT('%', :caseMaterial, '%'))) " +
@@ -29,6 +33,8 @@ public interface WatchRepository extends JpaRepository<Watch, Long>, JpaSpecific
            "AND (:maxPrice IS NULL OR w.price <= :maxPrice)")
     Page<Watch> findFiltered(
             @Param("search") String search,
+            @Param("brand") String brand,
+            @Param("collectionSlug") String collectionSlug,
             @Param("categorySlug") String categorySlug,
             @Param("movementType") String movementType,
             @Param("caseMaterial") String caseMaterial,
@@ -37,8 +43,19 @@ public interface WatchRepository extends JpaRepository<Watch, Long>, JpaSpecific
             Pageable pageable
     );
 
-    List<Watch> findByIdInAndStatus(List<Long> ids, String status);
+    List<Watch> findByIdInAndStatusAndBrandIgnoreCase(List<Long> ids, String status, String brand);
 
-    @Query("SELECT DISTINCT w.brand FROM Watch w WHERE w.status = 'PUBLISHED' ORDER BY w.brand")
+    boolean existsByCategoryId(Long categoryId);
+
+    @Query("SELECT DISTINCT w.brand FROM Watch w WHERE w.status = 'PUBLISHED' AND LOWER(w.brand) = 'rolex' ORDER BY w.brand")
     List<String> findDistinctBrands();
+
+    @Query("SELECT DISTINCT w.collectionName FROM Watch w WHERE w.status = 'PUBLISHED' AND LOWER(w.brand) = 'rolex' AND w.collectionName IS NOT NULL ORDER BY w.collectionName")
+    List<String> findDistinctCollections();
+
+    @Query("SELECT DISTINCT w.caseMaterial FROM Watch w WHERE w.status = 'PUBLISHED' AND LOWER(w.brand) = 'rolex' ORDER BY w.caseMaterial")
+    List<String> findDistinctCaseMaterials();
+
+    @Query("SELECT DISTINCT w.movementType FROM Watch w WHERE w.status = 'PUBLISHED' AND LOWER(w.brand) = 'rolex' ORDER BY w.movementType")
+    List<String> findDistinctMovementTypes();
 }

@@ -69,5 +69,8 @@ public record WatchCreateRequest(
 
     boolean featured,
 
-    String status
+    String status,
+
+    @Min(0)
+    Integer stockQuantity
 ) {}

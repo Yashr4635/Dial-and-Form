@@ -28,6 +28,8 @@ public class WatchService {
 
     public Page<WatchSummaryResponse> getFilteredWatches(
             String search,
+            String brand,
+            String collectionSlug,
             String categorySlug,
             String movementType,
             String caseMaterial,
@@ -36,18 +38,18 @@ public class WatchService {
             Pageable pageable
     ) {
         return watchRepository.findFiltered(
-                search, categorySlug, movementType, caseMaterial, minPrice, maxPrice, pageable
+                search, brand, collectionSlug, categorySlug, movementType, caseMaterial, minPrice, maxPrice, pageable
         ).map(WatchSummaryResponse::from);
     }
 
     public WatchDetailResponse getWatchBySlug(String slug) {
-        return watchRepository.findBySlug(slug)
+        return watchRepository.findBySlugAndStatusAndBrandIgnoreCase(slug, "PUBLISHED", "Rolex")
                 .map(WatchDetailResponse::from)
                 .orElseThrow(() -> new NoSuchElementException("Watch not found with slug: " + slug));
     }
 
     public List<WatchSummaryResponse> getFeaturedWatches() {
-        return watchRepository.findByFeaturedTrueAndStatus("PUBLISHED")
+        return watchRepository.findByFeaturedTrueAndStatusAndBrandIgnoreCase("PUBLISHED", "Rolex")
                 .stream()
                 .map(WatchSummaryResponse::from)
                 .toList();
@@ -60,7 +62,7 @@ public class WatchService {
         if (ids.size() > 4) {
             throw new IllegalArgumentException("Maximum of 4 watches can be compared side-by-side");
         }
-        List<WatchDetailResponse> watches = watchRepository.findByIdInAndStatus(ids, "PUBLISHED")
+        List<WatchDetailResponse> watches = watchRepository.findByIdInAndStatusAndBrandIgnoreCase(ids, "PUBLISHED", "Rolex")
                 .stream()
                 .map(WatchDetailResponse::from)
                 .toList();
@@ -71,8 +73,27 @@ public class WatchService {
         return watchRepository.findDistinctBrands();
     }
 
+    public List<String> getCollections() {
+        return watchRepository.findDistinctCollections();
+    }
+
+    public List<String> getCaseMaterials() {
+        return watchRepository.findDistinctCaseMaterials();
+    }
+
+    public List<String> getMovementTypes() {
+        return watchRepository.findDistinctMovementTypes();
+    }
+
+    public Page<WatchSummaryResponse> getAdminWatches(Pageable pageable) {
+        return watchRepository.findAll(pageable).map(WatchSummaryResponse::from);
+    }
+
     @Transactional
     public WatchDetailResponse createWatch(WatchCreateRequest req) {
+        if (req.brand() == null || !"Rolex".equalsIgnoreCase(req.brand().trim())) {
+            throw new IllegalArgumentException("Only Rolex catalog entries can be created");
+        }
         if (watchRepository.findBySlug(req.slug()).isPresent()) {
             throw new IllegalArgumentException("A watch with slug '" + req.slug() + "' already exists");
         }
@@ -81,7 +102,7 @@ public class WatchService {
 
         Watch watch = new Watch();
         watch.setName(req.name());
-        watch.setBrand(req.brand());
+        watch.setBrand("Rolex");
         watch.setSlug(req.slug());
         watch.setTagline(req.tagline());
         watch.setDescription(req.description());
@@ -102,6 +123,7 @@ public class WatchService {
         watch.setImageUrl(req.imageUrl());
         watch.setFeatured(req.featured());
         watch.setStatus(req.status() != null ? req.status() : "PUBLISHED");
+        if (req.stockQuantity() != null) watch.setStockQuantity(req.stockQuantity());
 
         Watch saved = watchRepository.save(watch);
         return WatchDetailResponse.from(saved);
@@ -113,7 +135,10 @@ public class WatchService {
                 .orElseThrow(() -> new NoSuchElementException("Watch not found with ID: " + id));
 
         if (req.name() != null) watch.setName(req.name());
-        if (req.brand() != null) watch.setBrand(req.brand());
+        if (req.brand() != null && !"Rolex".equalsIgnoreCase(req.brand().trim())) {
+            throw new IllegalArgumentException("Only Rolex catalog entries can be published");
+        }
+        if (req.brand() != null) watch.setBrand("Rolex");
         if (req.tagline() != null) watch.setTagline(req.tagline());
         if (req.description() != null) watch.setDescription(req.description());
         if (req.categoryId() != null) {
@@ -136,7 +161,13 @@ public class WatchService {
         if (req.functions() != null) watch.setFunctions(req.functions());
         if (req.imageUrl() != null) watch.setImageUrl(req.imageUrl());
         if (req.featured() != null) watch.setFeatured(req.featured());
-        if (req.status() != null) watch.setStatus(req.status());
+        if (req.status() != null) {
+            if ("PUBLISHED".equalsIgnoreCase(req.status()) && !"Rolex".equalsIgnoreCase(watch.getBrand())) {
+                throw new IllegalArgumentException("Only Rolex catalog entries can be published");
+            }
+            watch.setStatus(req.status());
+        }
+        if (req.stockQuantity() != null) watch.setStockQuantity(req.stockQuantity());
 
         return WatchDetailResponse.from(watchRepository.save(watch));
     }

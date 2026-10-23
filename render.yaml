@@ -1,0 +1,68 @@
+databases:
+  - name: dial-and-form-staging-db
+    databaseName: dial_and_form_staging
+    user: dial_and_form_app
+    plan: free
+    region: singapore
+    postgresMajorVersion: "16"
+    ipAllowList: [] # Private network only; both web services use the same region.
+
+services:
+  - type: web
+    name: dial-and-form-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    branch: main
+    plan: free
+    region: singapore
+    autoDeployTrigger: checksPass
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dial-and-form-staging-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: dial-and-form-storefront
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: SUPABASE_URL
+        fromService:
+          type: web
+          name: dial-and-form-storefront
+          envVarKey: SUPABASE_URL
+      - key: SUPABASE_PUBLISHABLE_KEY
+        fromService:
+          type: web
+          name: dial-and-form-storefront
+          envVarKey: SUPABASE_PUBLISHABLE_KEY
+
+  - type: web
+    name: dial-and-form-storefront
+    runtime: python
+    branch: main
+    plan: free
+    region: singapore
+    buildCommand: python3 -m py_compile server.py
+    startCommand: python3 server.py --host 0.0.0.0 --port $PORT
+    autoDeployTrigger: checksPass
+    healthCheckPath: /healthz
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: BACKEND_HOSTPORT
+        fromService:
+          type: web
+          name: dial-and-form-api
+          property: hostport
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false

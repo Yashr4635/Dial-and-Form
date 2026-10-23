@@ -45,6 +45,10 @@ public class WishlistService {
         Watch watch = watchRepository.findById(watchId)
                 .orElseThrow(() -> new NoSuchElementException("Watch not found with ID: " + watchId));
 
+        if (!"Rolex".equals(watch.getBrand()) || !"PUBLISHED".equals(watch.getStatus())) {
+            throw new IllegalArgumentException("Only published Rolex catalog entries can be added to a wishlist");
+        }
+
         wishlistRepository.save(new WishlistItem(user, watch));
     }
 

@@ -33,6 +33,9 @@ public class AddressService {
     }
 
     public ShippingAddressResponse addAddress(Long userId, ShippingAddressRequest req) {
+        if ("India".equalsIgnoreCase(req.country().trim()) && !req.postalCode().trim().matches("[0-9]{6}")) {
+            throw new IllegalArgumentException("PIN code must contain six digits for Indian addresses");
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + userId));
 

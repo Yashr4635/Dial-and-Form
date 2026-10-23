@@ -30,10 +30,10 @@ public class ShippingService {
             String trackingNum = "AW-EXP-" + (100000 + random.nextInt(900000));
             Shipment s = new Shipment();
             s.setOrder(order);
-            s.setProvider("SHIPROCKET");
-            s.setCourierName("Armored Courier Express (Insured)");
+            s.setProvider("DEMO");
+            s.setCourierName("Demonstration shipment — no live carrier");
             s.setTrackingNumber(trackingNum);
-            s.setTrackingUrl("https://track.atelierwatch.dev/" + trackingNum);
+            s.setTrackingUrl(null);
             s.setStatus("ORDER_PROCESSED");
             s.setEstimatedDelivery(Instant.now().plus(3, ChronoUnit.DAYS));
             return shipmentRepository.save(s);

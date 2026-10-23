@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title">
+  <title id="title">Product image unavailable</title>
+  <rect width="800" height="1000" fill="#eeeae2"/>
+  <circle cx="400" cy="475" r="250" fill="none" stroke="#c9c2b5" stroke-width="3"/>
+  <circle cx="400" cy="475" r="225" fill="#f7f4ed" stroke="#c9c2b5" stroke-width="2"/>
+  <path d="M365 250h70v-115h-70zM365 815h70V700h-70z" fill="#d6d0c4"/>
+  <circle cx="400" cy="475" r="10" fill="#8f887b"/>
+  <path d="M400 475V320M400 475l105 88" stroke="#8f887b" stroke-width="7" stroke-linecap="round"/>
+  <text x="400" y="895" text-anchor="middle" fill="#746d61" font-family="Georgia,serif" font-size="25" letter-spacing="4">IMAGE ON REQUEST</text>
+</svg>

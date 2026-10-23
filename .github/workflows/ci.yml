@@ -1,4 +1,4 @@
-name: Atelier Watch CI
+name: Dial & Form CI
 
 on:
   push:
@@ -21,7 +21,10 @@ jobs:
           node-version: '20'
 
       - name: Validate JavaScript Syntax
-        run: node -c app.js js/api.js js/ui.js
+        run: |
+          for file in app.js js/api.js js/ui.js js/storefront.js; do
+            node --check "$file"
+          done
 
       - name: Verify Animation Frame Sequence
         run: |

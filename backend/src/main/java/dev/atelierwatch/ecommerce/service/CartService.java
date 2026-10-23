@@ -54,8 +54,8 @@ public class CartService {
         Watch watch = watchRepository.findById(watchId)
                 .orElseThrow(() -> new NoSuchElementException("Watch not found: " + watchId));
 
-        if (!"PUBLISHED".equals(watch.getStatus())) {
-            throw new IllegalArgumentException("This timepiece is currently unavailable for acquisition");
+        if (!isPurchasable(watch)) {
+            throw new IllegalArgumentException("This Rolex is not purchasable yet. A verified price and available inventory are required.");
         }
 
         Cart cart = getOrCreateCart(userId);
@@ -93,6 +93,9 @@ public class CartService {
             cart.getItems().remove(item);
             cartItemRepository.delete(item);
         } else {
+            if (!isPurchasable(item.getWatch())) {
+                throw new IllegalArgumentException("This Rolex is not purchasable yet. A verified price and available inventory are required.");
+            }
             if (item.getWatch().getStockQuantity() < quantity) {
                 throw new IllegalArgumentException("Requested quantity (" + quantity + ") exceeds available inventory (" + item.getWatch().getStockQuantity() + ")");
             }
@@ -137,14 +140,23 @@ public class CartService {
                 .map(CartItemResponse::from)
                 .toList();
 
-        BigDecimal subtotal = itemResponses.stream()
-                .map(CartItemResponse::lineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        boolean checkoutAvailable = !itemResponses.isEmpty()
+                && itemResponses.stream().allMatch(CartItemResponse::purchasable);
+        BigDecimal subtotal = checkoutAvailable
+                ? itemResponses.stream().map(CartItemResponse::lineTotal).reduce(BigDecimal.ZERO, BigDecimal::add)
+                : null;
 
         int totalQty = itemResponses.stream()
                 .mapToInt(CartItemResponse::quantity)
                 .sum();
 
-        return new CartResponse(cart.getId(), itemResponses, subtotal, totalQty);
+        return new CartResponse(cart.getId(), itemResponses, subtotal, totalQty, checkoutAvailable);
+    }
+
+    private boolean isPurchasable(Watch watch) {
+        return "PUBLISHED".equals(watch.getStatus())
+                && "Rolex".equals(watch.getBrand())
+                && watch.getPrice() != null && watch.getPrice().signum() > 0
+                && watch.getStockQuantity() != null && watch.getStockQuantity() > 0;
     }
 }

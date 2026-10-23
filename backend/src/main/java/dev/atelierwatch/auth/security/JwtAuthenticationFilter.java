@@ -1,6 +1,7 @@
 package dev.atelierwatch.auth.security;
 
 import dev.atelierwatch.auth.repository.UserRepository;
+import dev.atelierwatch.auth.service.SupabaseIdentityService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,10 +21,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final SupabaseIdentityService supabaseIdentityService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            UserRepository userRepository,
+            SupabaseIdentityService supabaseIdentityService
+    ) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.supabaseIdentityService = supabaseIdentityService;
     }
 
     @Override
@@ -59,7 +66,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception ignored) {
-            // Invalid token will simply not set authentication
+            // Supabase access tokens use the provider's signing keys, not this app's local JWT key.
+        }
+
+        if (SecurityContextHolder.getContext().getAuthentication() == null && supabaseIdentityService.isConfigured()) {
+            try {
+                var user = supabaseIdentityService.authenticate(jwt);
+                var authorities = List.of(new SimpleGrantedAuthority(user.getRole()));
+                var authToken = new UsernamePasswordAuthenticationToken(user, null, authorities);
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            } catch (Exception ignored) {
+                // Invalid, expired, unverified, or unlinked provider tokens stay unauthenticated.
+            }
         }
 
         filterChain.doFilter(request, response);

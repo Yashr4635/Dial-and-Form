@@ -18,10 +18,10 @@ public class OpenApiConfig {
         final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
                 .info(new Info()
-                        .title("Atelier Watch REST API")
+                        .title("Dial & Form Storefront API")
                         .version("1.0.0")
-                        .description("Comprehensive REST API for the Atelier Watch Luxury Horology Discovery & Comparison Platform.")
-                        .contact(new Contact().name("Atelier Watch Engineering").email("dev@atelierwatch.dev"))
+                        .description("REST API for the Dial & Form independent Rolex-focused watch storefront.")
+                        .contact(new Contact().name("Dial & Form Engineering").email("hello@dialandform.example"))
                         .license(new License().name("MIT License")))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()

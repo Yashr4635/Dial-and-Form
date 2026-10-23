@@ -10,8 +10,10 @@ import dev.atelierwatch.auth.security.JwtService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -22,18 +24,29 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final SupabaseIdentityService supabaseIdentityService;
 
     @Value("${app.jwt.expiration-ms:86400000}")
     private long jwtExpiration;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            SupabaseIdentityService supabaseIdentityService
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.supabaseIdentityService = supabaseIdentityService;
     }
 
     @Transactional(readOnly = true)
     public AuthResponse login(AuthRequest request) {
+        if (supabaseIdentityService.isConfigured()) {
+            throw new org.springframework.security.authentication.BadCredentialsException(
+                    "Sign in through the configured Supabase authentication provider");
+        }
         User user = userRepository.findByEmail(request.email().toLowerCase().trim())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
@@ -51,6 +64,10 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        if (supabaseIdentityService.isConfigured()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Create accounts through the configured Supabase authentication provider");
+        }
         String email = request.email().toLowerCase().trim();
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("An account with email " + email + " already exists");

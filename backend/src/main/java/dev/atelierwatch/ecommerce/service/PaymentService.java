@@ -15,7 +15,6 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.time.Instant;
 import java.util.HexFormat;
 import java.util.NoSuchElementException;
 
@@ -25,19 +24,17 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
-    private final ShippingService shippingService;
     private final SecureRandom random = new SecureRandom();
 
-    @Value("${app.razorpay.key-id:rzp_test_AtelierWatch2026}")
+    @Value("${app.razorpay.key-id:DEMO_ONLY}")
     private String keyId;
 
-    @Value("${app.razorpay.key-secret:atelier_secret_key_luxury_horology_2026}")
+    @Value("${app.razorpay.key-secret:}")
     private String keySecret;
 
-    public PaymentService(PaymentRepository paymentRepository, OrderRepository orderRepository, ShippingService shippingService) {
+    public PaymentService(PaymentRepository paymentRepository, OrderRepository orderRepository) {
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
-        this.shippingService = shippingService;
     }
 
     public RazorpayOrderResponse createRazorpayOrder(Long userId, String orderReference) {
@@ -48,12 +45,12 @@ public class PaymentService {
             throw new IllegalArgumentException("Order is not in pending payment state");
         }
 
-        String razorpayOrderId = "order_" + Math.abs(random.nextLong() % 1000000000000L);
+        String razorpayOrderId = "demo_order_" + Math.abs(random.nextLong() % 1000000000000L);
 
         Payment payment = paymentRepository.findByOrderId(order.getId()).orElseGet(() -> {
             Payment p = new Payment();
             p.setOrder(order);
-            p.setGateway("RAZORPAY");
+            p.setGateway("DEMO");
             p.setAmount(order.getTotalAmount());
             p.setCurrency(order.getCurrency());
             return p;
@@ -75,8 +72,9 @@ public class PaymentService {
         );
     }
 
-    public boolean verifyPayment(PaymentVerificationRequest req) {
-        Order order = orderRepository.findByOrderReference(req.orderReference())
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
+    public boolean verifyPayment(Long userId, PaymentVerificationRequest req) {
+        Order order = orderRepository.findByOrderReferenceAndUserId(req.orderReference(), userId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + req.orderReference()));
 
         Payment payment = paymentRepository.findByOrderId(order.getId())
@@ -84,30 +82,35 @@ public class PaymentService {
 
         // Verify HMAC-SHA256 signature
         String payload = req.razorpayOrderId() + "|" + req.razorpayPaymentId();
-        boolean isValid = verifySignature(payload, req.razorpaySignature(), keySecret);
+        boolean isValid = req.razorpayOrderId().equals(payment.getGatewayOrderId())
+                && verifySignature(payload, req.razorpaySignature(), keySecret);
 
         if (!isValid) {
-            payment.setStatus("PAYMENT_FAILED");
-            order.setStatus("PAYMENT_FAILED");
+            payment.setStatus("FAILED");
             paymentRepository.save(payment);
-            orderRepository.save(order);
             throw new IllegalArgumentException("Invalid payment signature — potential tampering detected");
         }
 
-        // Idempotent Transition
-        if (!"CONFIRMED".equals(order.getStatus())) {
-            payment.setGatewayPaymentId(req.razorpayPaymentId());
-            payment.setGatewaySignature(req.razorpaySignature());
-            payment.setStatus("PAID");
-            payment.setPaidAt(Instant.now());
-            order.setStatus("CONFIRMED");
-
-            paymentRepository.save(payment);
-            orderRepository.save(order);
-
-            // Trigger automated shipment creation
-            shippingService.createShipment(order);
+        if ("DEMO_COMPLETED".equals(order.getStatus())) {
+            if (req.razorpayPaymentId().equals(payment.getGatewayPaymentId())
+                    && req.razorpaySignature().equals(payment.getGatewaySignature())
+                    && "SIMULATED".equals(payment.getStatus())) {
+                return true;
+            }
+            throw new IllegalArgumentException("Demo order is already completed with another simulated result");
         }
+        if (!"PENDING_PAYMENT".equals(order.getStatus())) {
+            throw new IllegalArgumentException("Order is not awaiting payment");
+        }
+
+        payment.setGatewayPaymentId(req.razorpayPaymentId());
+        payment.setGatewaySignature(req.razorpaySignature());
+        payment.setStatus("SIMULATED");
+        payment.setPaidAt(null);
+        order.setStatus("DEMO_COMPLETED");
+
+        paymentRepository.save(payment);
+        orderRepository.save(order);
 
         return true;
     }
@@ -122,6 +125,20 @@ public class PaymentService {
     public String generateSimulatedSignature(String orderId, String paymentId) {
         String data = orderId + "|" + paymentId;
         return calculateHmacSha256(data, keySecret);
+    }
+
+    public String generateSimulatedSignature(Long userId, String orderReference, String paymentId) {
+        Order order = orderRepository.findByOrderReferenceAndUserId(orderReference, userId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderReference));
+        if (!"PENDING_PAYMENT".equals(order.getStatus())) {
+            throw new IllegalArgumentException("Order is not awaiting payment");
+        }
+        Payment payment = paymentRepository.findByOrderId(order.getId())
+                .orElseThrow(() -> new NoSuchElementException("Payment record not found for order"));
+        if (payment.getGatewayOrderId() == null) {
+            throw new IllegalArgumentException("Payment order has not been initialized");
+        }
+        return generateSimulatedSignature(payment.getGatewayOrderId(), paymentId);
     }
 
     private boolean verifySignature(String data, String signature, String secret) {

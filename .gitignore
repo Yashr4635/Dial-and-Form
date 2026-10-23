@@ -13,3 +13,12 @@ target/
 
 ### Logs ###
 *.log
+__pycache__/
+
+# Rights-restricted brochure images and local review mapping; never commit or deploy.
+assets/private-review/
+
+# Local credentials and environment overrides; keep the safe template shareable.
+.env
+.env.*
+!.env.example

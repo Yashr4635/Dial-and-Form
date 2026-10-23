@@ -14,11 +14,17 @@ public record CartItemResponse(
     BigDecimal unitPrice,
     int quantity,
     BigDecimal lineTotal,
-    int availableStock
+    Integer availableStock,
+    boolean purchasable
 ) {
     public static CartItemResponse from(CartItem item) {
         var watch = item.getWatch();
-        BigDecimal line = watch.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+        boolean purchasable = "PUBLISHED".equals(watch.getStatus())
+                && "Rolex".equals(watch.getBrand())
+                && watch.getPrice() != null && watch.getPrice().signum() > 0
+                && watch.getStockQuantity() != null && watch.getStockQuantity() > 0;
+        BigDecimal unitPrice = purchasable ? watch.getPrice() : null;
+        BigDecimal line = purchasable ? unitPrice.multiply(BigDecimal.valueOf(item.getQuantity())) : null;
         return new CartItemResponse(
             item.getId(),
             watch.getId(),
@@ -27,10 +33,11 @@ public record CartItemResponse(
             watch.getSlug(),
             watch.getReferenceNumber(),
             watch.getImageUrl(),
-            watch.getPrice(),
+            unitPrice,
             item.getQuantity(),
             line,
-            watch.getStockQuantity()
+            watch.getStockQuantity(),
+            purchasable
         );
     }
 }

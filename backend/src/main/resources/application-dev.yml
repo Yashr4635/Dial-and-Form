@@ -21,6 +21,13 @@ spring:
     locations: classpath:db/migration
 
 app:
+  supabase:
+    url: ${SUPABASE_URL:}
+    publishable-key: ${SUPABASE_PUBLISHABLE_KEY:}
+  razorpay:
+    simulation-enabled: true
+    key-id: DEMO_ONLY
+    key-secret: atelier_dev_only_signature_secret
   jwt:
     secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
     expiration-ms: 86400000 # 24 hours

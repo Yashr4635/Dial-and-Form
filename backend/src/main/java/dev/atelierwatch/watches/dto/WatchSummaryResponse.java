@@ -20,7 +20,9 @@ public record WatchSummaryResponse(
     BigDecimal caseDiameterMm,
     String dialColor,
     String imageUrl,
-    boolean featured
+    boolean featured,
+    String collectionName,
+    boolean purchasable
 ) {
     public static WatchSummaryResponse from(Watch watch) {
         return new WatchSummaryResponse(
@@ -40,7 +42,16 @@ public record WatchSummaryResponse(
             watch.getCaseDiameterMm(),
             watch.getDialColor(),
             watch.getImageUrl(),
-            watch.isFeatured()
+            watch.isFeatured(),
+            watch.getCollectionName(),
+            isPurchasable(watch)
         );
+    }
+
+    private static boolean isPurchasable(Watch watch) {
+        return "PUBLISHED".equals(watch.getStatus())
+                && "Rolex".equals(watch.getBrand())
+                && watch.getPrice() != null && watch.getPrice().signum() > 0
+                && watch.getStockQuantity() != null && watch.getStockQuantity() > 0;
     }
 }

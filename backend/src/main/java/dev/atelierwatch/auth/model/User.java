@@ -17,6 +17,12 @@ public class User {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    // Nullable for accounts created before Supabase Auth is configured. The
+    // provider subject is the durable identity; email is only used for a
+    // one-time link after Supabase confirms the address.
+    @Column(name = "supabase_user_id", length = 36, unique = true)
+    private String supabaseUserId;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -49,6 +55,8 @@ public class User {
     public void setDisplayName(String displayName) { this.displayName = displayName; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    public String getSupabaseUserId() { return supabaseUserId; }
+    public void setSupabaseUserId(String supabaseUserId) { this.supabaseUserId = supabaseUserId; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getRole() { return role; }

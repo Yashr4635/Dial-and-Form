@@ -1,12 +1,11 @@
 /**
- * Atelier Watch UI & Integration Layer
+ * Dial & Form UI & Integration Layer
  */
 (() => {
     // State
     const state = {
         categories: [],
         watches: [],
-        comparisonList: JSON.parse(localStorage.getItem("atelier_compare") || "[]"),
         wishlistIds: new Set(),
         currentFilter: {
             search: "",
@@ -22,7 +21,6 @@
     const elements = {
         catalogModal: document.getElementById("catalog-modal"),
         detailModal: document.getElementById("detail-modal"),
-        compareModal: document.getElementById("compare-modal"),
         authModal: document.getElementById("auth-modal"),
         toastContainer: document.getElementById("toast-container"),
 
@@ -37,9 +35,6 @@
         // Triggers
         openCatalogBtns: document.querySelectorAll("[data-open-catalog]"),
         openAuthBtns: document.querySelectorAll("[data-open-auth]"),
-        compareTray: document.getElementById("compare-tray"),
-        compareCountBadge: document.getElementById("compare-count"),
-        openCompareBtn: document.getElementById("open-compare-btn"),
 
         // Auth
         authNavBtn: document.getElementById("auth-nav-btn"),
@@ -86,11 +81,20 @@
 
     // Helper: Format Price
     function formatCurrency(amount, currency = "USD") {
+        if (amount === null || amount === undefined || amount === "") return "Price on request";
+        currency = currency || "USD";
         return new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: currency,
             maximumFractionDigits: 0
         }).format(amount);
+    }
+
+    function productImageSource(product) {
+        const source = product?.imageUrl || product?.watchImageUrl;
+        return !source || String(source).startsWith("catalog:")
+            ? "/assets/catalog/placeholder-watch.svg"
+            : source;
     }
 
     // Modal Manager
@@ -179,13 +183,13 @@
         }
 
         elements.catalogGrid.innerHTML = watches.map(watch => {
-            const isCompared = state.comparisonList.includes(watch.id);
             const isSaved = state.wishlistIds.has(watch.id);
+            const purchasable = watch.purchasable === true && Number(watch.price) > 0 && Number(watch.stockQuantity) > 0;
 
             return `
                 <article class="watch-card" data-slug="${watch.slug}">
                     <div class="watch-card-media" data-open-detail="${watch.slug}">
-                        <img src="${watch.imageUrl}" alt="${watch.name}" loading="lazy" />
+                        <img src="${productImageSource(watch)}" alt="${watch.name}" loading="lazy" />
                         ${watch.featured ? '<span class="watch-badge">Featured</span>' : ''}
                         <button class="wishlist-btn ${isSaved ? 'is-saved' : ''}" data-wishlist-id="${watch.id}" aria-label="Toggle Wishlist">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="${isSaved ? '#c9a66c' : 'none'}" stroke="currentColor" stroke-width="1.6">
@@ -207,10 +211,7 @@
                             <span class="watch-card-price">${formatCurrency(watch.price, watch.currency)}</span>
                             <div class="watch-card-actions">
                                 <button class="btn-text" data-open-detail="${watch.slug}">Specs</button>
-                                <button class="btn-compare ${isCompared ? 'is-active' : ''}" data-compare-id="${watch.id}">
-                                    ${isCompared ? 'Compared' : '+ Compare'}
-                                </button>
-                                <button class="btn-primary" style="padding: 6px 10px; font-size: 8px;" data-add-cart="${watch.id}">+ Bag</button>
+                                <button class="btn-primary" style="padding: 6px 10px; font-size: 8px;" data-add-cart="${watch.id}" ${purchasable ? "" : "disabled"}>${purchasable ? "+ Bag" : "Price on request"}</button>
                             </div>
                         </div>
                     </div>
@@ -235,13 +236,6 @@
             });
         });
 
-        elements.catalogGrid.querySelectorAll("[data-compare-id]").forEach(btn => {
-            btn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                const id = parseInt(btn.getAttribute("data-compare-id"));
-                toggleComparison(id);
-            });
-        });
 
         elements.catalogGrid.querySelectorAll("[data-wishlist-id]").forEach(btn => {
             btn.addEventListener("click", (e) => {
@@ -287,13 +281,13 @@
         try {
             const watch = await window.atelierApi.getWatchBySlug(slug);
             state.activeWatch = watch;
-            const isCompared = state.comparisonList.includes(watch.id);
             const isSaved = state.wishlistIds.has(watch.id);
+            const purchasable = watch.purchasable === true && Number(watch.price) > 0 && Number(watch.stockQuantity) > 0;
 
             container.innerHTML = `
                 <div class="detail-layout">
                     <div class="detail-gallery">
-                        <img src="${watch.imageUrl}" alt="${watch.name}" />
+                        <img src="${productImageSource(watch)}" alt="${watch.name}" />
                     </div>
                     <div class="detail-info">
                         <div class="detail-header">
@@ -356,14 +350,11 @@
                         </div>
 
                         <div class="detail-actions">
-                            <button class="btn-primary" id="detail-cart-btn">
-                                Add to Bag (${formatCurrency(watch.price, watch.currency)})
+                            <button class="btn-primary" id="detail-cart-btn" ${purchasable ? "" : "disabled"}>
+                                ${purchasable ? `Add to Bag (${formatCurrency(watch.price, watch.currency)})` : "Price on request"}
                             </button>
                             <button class="btn-secondary" id="detail-wishlist-btn">
                                 ${isSaved ? 'In Your Wishlist' : 'Add to Wishlist'}
-                            </button>
-                            <button class="btn-secondary" id="detail-compare-btn">
-                                ${isCompared ? 'Remove from Compare' : 'Add to Compare'}
                             </button>
                         </div>
                     </div>
@@ -379,10 +370,6 @@
                 openWatchDetail(slug);
             });
 
-            document.getElementById("detail-compare-btn").addEventListener("click", () => {
-                toggleComparison(watch.id);
-                openWatchDetail(slug);
-            });
         } catch (err) {
             container.innerHTML = `
                 <div class="modal-error-state">
@@ -390,143 +377,6 @@
                 </div>
             `;
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // 3. Side-by-Side Comparison Matrix
-    // -------------------------------------------------------------------------
-    function updateCompareTray() {
-        const count = state.comparisonList.length;
-        if (elements.compareCountBadge) elements.compareCountBadge.textContent = count;
-        if (elements.compareTray) {
-            if (count > 0) elements.compareTray.classList.add("is-visible");
-            else elements.compareTray.classList.remove("is-visible");
-        }
-        localStorage.setItem("atelier_compare", JSON.stringify(state.comparisonList));
-    }
-
-    function toggleComparison(watchId) {
-        const index = state.comparisonList.indexOf(watchId);
-        if (index > -1) {
-            state.comparisonList.splice(index, 1);
-            showToast("Watch removed from comparison");
-        } else {
-            if (state.comparisonList.length >= 4) {
-                showToast("Maximum 4 watches can be compared side-by-side", "error");
-                return;
-            }
-            state.comparisonList.push(watchId);
-            showToast("Added to comparison");
-        }
-        updateCompareTray();
-        renderWatchGrid(state.watches);
-    }
-
-    async function openComparisonMatrix() {
-        if (state.comparisonList.length < 2) {
-            showToast("Select at least 2 watches to compare", "info");
-            return;
-        }
-
-        openModal(elements.compareModal);
-        const container = document.getElementById("compare-content");
-        container.innerHTML = `
-            <div class="modal-loading-state">
-                <span class="spinner"></span>
-                <p>Generating technical comparison matrix...</p>
-            </div>
-        `;
-
-        try {
-            const data = await window.atelierApi.compareWatches(state.comparisonList);
-            const watches = data.watches;
-
-            container.innerHTML = `
-                <div class="compare-table-wrapper">
-                    <table class="compare-table">
-                        <thead>
-                            <tr>
-                                <th class="spec-col-header">Attribute</th>
-                                ${watches.map(w => `
-                                    <th class="watch-col-header">
-                                        <button class="remove-compare-btn" data-remove-compare="${w.id}" title="Remove">✕</button>
-                                        <img src="${w.imageUrl}" alt="${w.name}" class="compare-thumb" />
-                                        <div class="compare-watch-brand">${w.brand}</div>
-                                        <div class="compare-watch-name">${w.name}</div>
-                                        <div class="compare-watch-price">${formatCurrency(w.price, w.currency)}</div>
-                                    </th>
-                                `).join("")}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="spec-label">Category</td>
-                                ${watches.map(w => `<td>${w.category ? w.category.name : '—'}</td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Movement Type</td>
-                                ${watches.map(w => `<td><strong>${w.movementType}</strong></td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Caliber</td>
-                                ${watches.map(w => `<td>${w.caliber || 'In-House'}</td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Case Material</td>
-                                ${watches.map(w => `<td>${w.caseMaterial}</td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Diameter</td>
-                                ${watches.map(w => `<td>${w.caseDiameterMm} mm</td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Thickness</td>
-                                ${watches.map(w => `<td>${w.caseThicknessMm ? w.caseThicknessMm + ' mm' : '—'}</td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Water Resistance</td>
-                                ${watches.map(w => `<td><strong>${w.waterResistanceM} meters</strong></td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Power Reserve</td>
-                                ${watches.map(w => `<td><strong>${w.powerReserveHours} Hours</strong></td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Dial Color</td>
-                                ${watches.map(w => `<td>${w.dialColor}</td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Crystal</td>
-                                ${watches.map(w => `<td>${w.crystalMaterial}</td>`).join("")}
-                            </tr>
-                            <tr>
-                                <td class="spec-label">Complications</td>
-                                ${watches.map(w => `<td>${w.functions || 'Standard Hours, Minutes, Seconds'}</td>`).join("")}
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            container.querySelectorAll("[data-remove-compare]").forEach(btn => {
-                btn.addEventListener("click", () => {
-                    const id = parseInt(btn.getAttribute("data-remove-compare"));
-                    toggleComparison(id);
-                    if (state.comparisonList.length >= 2) openComparisonMatrix();
-                    else closeModal(elements.compareModal);
-                });
-            });
-        } catch (err) {
-            container.innerHTML = `
-                <div class="modal-error-state">
-                    <p>Failed to generate comparison.</p>
-                </div>
-            `;
-        }
-    }
-
-    if (elements.openCompareBtn) {
-        elements.openCompareBtn.addEventListener("click", openComparisonMatrix);
     }
 
     // -------------------------------------------------------------------------
@@ -605,7 +455,7 @@
 
         elements.wishlistGrid.innerHTML = items.map(w => `
             <div class="wishlist-card">
-                <img src="${w.imageUrl}" alt="${w.name}" />
+                <img src="${productImageSource(w)}" alt="${w.name}" />
                 <div class="wishlist-card-details">
                     <span class="wishlist-card-brand">${w.brand}</span>
                     <h4 class="wishlist-card-title">${w.name}</h4>
@@ -661,8 +511,10 @@
 
             try {
                 const res = await window.atelierApi.login(email, password);
+                await window.atelierApi.mergeGuestCart().catch(err => console.warn("Guest cart could not be merged:", err));
                 showToast(`Welcome back, ${res.user.displayName}`);
                 updateAuthDisplay(res.user);
+                syncCart();
                 syncWishlist();
                 closeModal(elements.authModal);
                 elements.loginForm.reset();
@@ -692,8 +544,10 @@
 
             try {
                 const res = await window.atelierApi.register(displayName, email, password);
-                showToast(`Welcome to Atelier Watch, ${res.user.displayName}`);
+                await window.atelierApi.mergeGuestCart().catch(err => console.warn("Guest cart could not be merged:", err));
+                showToast(`Welcome to Dial & Form, ${res.user.displayName}`);
                 updateAuthDisplay(res.user);
+                syncCart();
                 closeModal(elements.authModal);
                 elements.registerForm.reset();
             } catch (err) {
@@ -760,12 +614,12 @@
             return;
         }
 
-        if (elements.btnProceedCheckout) elements.btnProceedCheckout.disabled = false;
+        if (elements.btnProceedCheckout) elements.btnProceedCheckout.disabled = cart.checkoutAvailable !== true;
         if (elements.cartSubtotal) elements.cartSubtotal.textContent = formatCurrency(cart.subtotal);
 
         elements.cartItemsContainer.innerHTML = cart.items.map(item => `
             <div class="cart-item-row" data-cart-item-id="${item.id || item.watchId}">
-                <img src="${item.imageUrl || item.watchImageUrl || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=400&q=80'}" alt="${item.name || item.watchTitle || ''}" class="cart-item-img" />
+                <img src="${productImageSource(item)}" alt="${item.name || item.watchTitle || ''}" class="cart-item-img" />
                 <div>
                     <span class="cart-item-brand">${item.brand || item.watchBrand || ''}</span>
                     <h5 class="cart-item-title">${item.name || item.watchTitle || 'Luxury Watch'}</h5>
@@ -853,27 +707,35 @@
 
     async function setupCheckoutModal() {
         try {
+            selectedAddressId = null;
             const addresses = await window.atelierApi.getAddresses();
             if (elements.savedAddressesList) {
                 if (addresses && addresses.length > 0) {
-                    selectedAddressId = addresses[0].id;
+                    const defaultIndex = Math.max(0, addresses.findIndex(address => address.defaultAddress));
+                    selectedAddressId = addresses[defaultIndex].id;
                     elements.savedAddressesList.innerHTML = `
                         <div style="font-size: 11px; color: var(--gold); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.1em;">Saved Shipping Destinations:</div>
                         ${addresses.map((a, idx) => `
                             <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 12px; cursor: pointer;">
-                                <input type="radio" name="selected_addr" value="${a.id}" ${idx === 0 ? 'checked' : ''} style="margin-top: 3px;" />
+                                <input type="radio" name="selected_addr" value="${a.id}" ${idx === defaultIndex ? 'checked' : ''} style="margin-top: 3px;" />
                                 <div>
                                     <strong style="color: #fff;">${a.recipientName}</strong> (${a.phone})<br/>
-                                    <span style="color: rgba(244, 239, 224, 0.7);">${a.streetAddress}${a.apartmentSuite ? ', ' + a.apartmentSuite : ''}, ${a.city}, ${a.state} ${a.postalCode}</span>
+                                    <span style="color: rgba(244, 239, 224, 0.7);">${a.addressLine1}${a.addressLine2 ? ', ' + a.addressLine2 : ''}, ${a.city}, ${a.state} ${a.postalCode}, ${a.country}</span>
                                 </div>
                             </label>
                         `).join("")}
+                        <button type="button" class="btn-text" id="use-new-address">Use a new delivery address</button>
                     `;
                     elements.savedAddressesList.querySelectorAll("input[name='selected_addr']").forEach(radio => {
                         radio.addEventListener("change", (e) => {
                             selectedAddressId = parseInt(e.target.value);
                             updateCheckoutQuote(selectedAddressId);
                         });
+                    });
+                    document.getElementById("use-new-address")?.addEventListener("click", () => {
+                        selectedAddressId = null;
+                        elements.savedAddressesList.querySelectorAll("input[name='selected_addr']").forEach(radio => { radio.checked = false; });
+                        document.getElementById("ship-name")?.focus();
                     });
                 } else {
                     elements.savedAddressesList.innerHTML = `<p style="font-size: 11px; color: rgba(244, 239, 224, 0.5); margin-bottom: 10px;">Please enter your delivery destination details below:</p>`;
@@ -912,23 +774,33 @@
 
                 // If no saved address selected, save from form
                 if (!addressId) {
-                    const recipientName = document.getElementById("ship-name").value.trim() || "Alexander Thorne";
-                    const phone = document.getElementById("ship-phone").value.trim() || "+1-555-019-2834";
-                    const street = document.getElementById("ship-street").value.trim() || "742 Evergreen Terrace";
-                    const city = document.getElementById("ship-city").value.trim() || "New York";
-                    const stateName = document.getElementById("ship-state").value.trim() || "NY";
-                    const postal = document.getElementById("ship-postal").value.trim() || "10021";
+                    if (!elements.checkoutAddressForm.reportValidity()) return;
+                    const recipientName = document.getElementById("ship-name").value.trim();
+                    const phone = document.getElementById("ship-phone").value.trim();
+                    const street = document.getElementById("ship-street").value.trim();
+                    const addressLine2 = document.getElementById("ship-address2").value.trim();
+                    const city = document.getElementById("ship-city").value.trim();
+                    const stateName = document.getElementById("ship-state").value.trim();
+                    const postalField = document.getElementById("ship-postal");
+                    const postal = postalField.value.trim();
+                    const country = document.getElementById("ship-country").value;
+                    if (country === "India" && !/^\d{6}$/.test(postal)) {
+                        postalField.setCustomValidity("Enter a six-digit Indian PIN code.");
+                        elements.checkoutAddressForm.reportValidity();
+                        postalField.setCustomValidity("");
+                        return;
+                    }
 
                     const savedAddr = await window.atelierApi.saveAddress({
                         recipientName,
                         phone,
-                        streetAddress: street,
-                        apartmentSuite: "Penthouse Suite",
+                        addressLine1: street,
+                        addressLine2,
                         city,
                         state: stateName,
                         postalCode: postal,
-                        country: "United States",
-                        isDefault: true
+                        country,
+                        defaultAddress: true
                     });
                     addressId = savedAddr.id;
                 }
@@ -939,33 +811,37 @@
                 const orderRef = orderData.orderReference;
 
                 // 2. Initialize Razorpay Payment Gateway Order
-                elements.btnPayRazorpay.textContent = "Connecting Razorpay Gateway...";
+                elements.btnPayRazorpay.textContent = "Preparing demo payment record...";
                 const rzpOrder = await window.atelierApi.createRazorpayOrder(orderRef);
 
                 // 3. Simulated/Test Razorpay Payment Verification
                 elements.btnPayRazorpay.textContent = "Verifying HMAC-SHA256 Signature...";
                 const simulatedPaymentId = "pay_test_" + Date.now();
+                const signatureData = await window.atelierApi.getTestPaymentSignature(orderRef, simulatedPaymentId);
                 
                 // Call verification endpoint
                 await window.atelierApi.verifyPayment({
                     orderReference: orderRef,
                     razorpayOrderId: rzpOrder.razorpayOrderId,
                     razorpayPaymentId: simulatedPaymentId,
-                    razorpaySignature: "simulated_valid_test_signature"
+                    razorpaySignature: signatureData.signature
                 });
 
-                showToast(`Order ${orderRef} Confirmed! Armored courier tracking assigned.`, "info");
+                showToast(`Demo order ${orderRef} recorded. No payment was processed and no shipment was created.`, "info");
                 await window.atelierApi.clearCart();
                 await syncCart();
 
                 closeModal(elements.checkoutModal);
-                openModal(elements.authModal);
-                document.querySelector(".auth-tab[data-tab='orders']")?.click();
+                if (typeof window.atelierNavigate === "function") {
+                    window.atelierNavigate(`/orders/${encodeURIComponent(orderRef)}`);
+                } else {
+                    window.location.assign(`/orders/${encodeURIComponent(orderRef)}`);
+                }
             } catch (err) {
                 showToast(err.message || "Payment authorization failed", "error");
             } finally {
                 elements.btnPayRazorpay.disabled = false;
-                elements.btnPayRazorpay.textContent = "Authorize Payment with Razorpay (Test Mode)";
+                elements.btnPayRazorpay.textContent = "Simulate demo payment (no charge)";
             }
         });
     }
@@ -1026,10 +902,10 @@
                 ${ord.trackingNumber ? `
                     <div class="order-tracking-box">
                         <div>
-                            <span style="color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-size: 9px; display: block;">Insured Armored Dispatch</span>
+                            <span style="color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-size: 9px; display: block;">Demonstration shipment · not live carrier tracking</span>
                             <span style="font-family: monospace; font-size: 12px; color: #fff;">${ord.trackingNumber}</span>
                         </div>
-                        <span style="font-size: 10px; color: rgba(244, 239, 224, 0.7);">${ord.shipmentStatus || 'In Transit via Atelier Express'}</span>
+                        <span style="font-size: 10px; color: rgba(244, 239, 224, 0.7);">${ord.shipmentStatus || 'Shipment in transit'}</span>
                     </div>
                 ` : ''}
             </div>
@@ -1090,8 +966,9 @@
 
     // Init Lifecycle
     loadCategories();
-    fetchWatches();
-    updateCompareTray();
+    // The routed storefront owns catalog loading when present. Avoid starting an
+    // invisible legacy catalog request on every page load.
+    if (!document.getElementById("route-app")) fetchWatches();
     initUserSession();
     syncCart();
 })();

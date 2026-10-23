@@ -2,13 +2,17 @@ package dev.atelierwatch.ecommerce;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.atelierwatch.auth.dto.AuthRequest;
-import dev.atelierwatch.auth.dto.AuthResponse;
-import dev.atelierwatch.auth.dto.RegisterRequest;
-import dev.atelierwatch.ecommerce.dto.CartItemRequest;
+import dev.atelierwatch.auth.model.User;
+import dev.atelierwatch.auth.repository.UserRepository;
 import dev.atelierwatch.ecommerce.dto.CreateOrderRequest;
+import dev.atelierwatch.ecommerce.model.Cart;
+import dev.atelierwatch.ecommerce.model.CartItem;
+import dev.atelierwatch.ecommerce.repository.CartRepository;
+import dev.atelierwatch.ecommerce.repository.OrderRepository;
 import dev.atelierwatch.ecommerce.dto.PaymentVerificationRequest;
 import dev.atelierwatch.ecommerce.dto.ShippingAddressRequest;
-import dev.atelierwatch.ecommerce.service.PaymentService;
+import dev.atelierwatch.watches.model.Watch;
+import dev.atelierwatch.watches.repository.WatchRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +38,16 @@ class EcommerceFlowTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private PaymentService paymentService;
+    private UserRepository userRepository;
+
+    @Autowired
+    private WatchRepository watchRepository;
+
+    @Autowired
+    private CartRepository cartRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     private String getAuthToken(String email, String password) throws Exception {
         AuthRequest req = new AuthRequest(email, password);
@@ -48,23 +61,26 @@ class EcommerceFlowTest {
     }
 
     @Test
-    @DisplayName("End-to-End Shopping Journey: Cart -> Address -> Checkout -> Payment -> Order Tracking")
-    void testCompleteShoppingJourney() throws Exception {
-        // 1. Authenticate Collector
+    @DisplayName("Unpriced catalog records cannot enter cart, checkout quote, order, or payment flow")
+    void testUnpricedCatalogItemCannotBePurchased() throws Exception {
         String token = getAuthToken("collector@atelierwatch.dev", "Admin@123456");
-
-        // 2. Add Watch 1 to Cart (Sky-Dweller)
-        CartItemRequest cartReq = new CartItemRequest(1L, 1);
+        Watch watch = watchRepository.findBySlug("rolex-126334").orElseThrow();
         mockMvc.perform(post("/api/v1/cart/items")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(cartReq)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.items", hasSize(greaterThanOrEqualTo(1))))
-                .andExpect(jsonPath("$.data.subtotal").isNumber());
+                        .content(objectMapper.writeValueAsString(new dev.atelierwatch.ecommerce.dto.CartItemRequest(watch.getId(), 1))))
+                .andExpect(status().isBadRequest());
 
-        // 3. Save Shipping Address
+        User user = userRepository.findByEmail("collector@atelierwatch.dev").orElseThrow();
+        Cart cart = cartRepository.findByUserId(user.getId()).orElseGet(() -> cartRepository.save(new Cart(user)));
+        cart.getItems().add(new CartItem(cart, watch, 1));
+        cartRepository.saveAndFlush(cart);
+        mockMvc.perform(get("/api/v1/cart").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.checkoutAvailable").value(false))
+                .andExpect(jsonPath("$.data.items[0].purchasable").value(false))
+                .andExpect(jsonPath("$.data.items[0].unitPrice").value(nullValue()));
+
         ShippingAddressRequest addrReq = new ShippingAddressRequest(
                 "Alexander Thorne", "+1-555-019-2834", "742 Evergreen Terrace", "Suite 4B",
                 "New York", "NY", "10021", "United States", true
@@ -78,54 +94,20 @@ class EcommerceFlowTest {
 
         long addressId = objectMapper.readTree(addrResp).get("data").get("id").asLong();
 
-        // 4. Generate Checkout Quote
         mockMvc.perform(get("/api/v1/checkout/quote?addressId=" + addressId)
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.subtotal").isNumber())
-                .andExpect(jsonPath("$.data.shippingFee").isNumber())
-                .andExpect(jsonPath("$.data.totalAmount").isNumber());
+                .andExpect(status().isBadRequest());
 
-        // 5. Place Order (Atomic inventory deduction & order reference creation)
         CreateOrderRequest orderReq = new CreateOrderRequest(addressId);
-        String orderResp = mockMvc.perform(post("/api/v1/checkout/orders")
+        mockMvc.perform(post("/api/v1/checkout/orders")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderReq)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.orderReference", startsWith("AW-2026-")))
-                .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"))
-                .andReturn().getResponse().getContentAsString();
-
-        String orderRef = objectMapper.readTree(orderResp).get("data").get("orderReference").asText();
-
-        // 6. Initialize Razorpay Payment Order
-        String rzpResp = mockMvc.perform(post("/api/v1/payments/razorpay/create-order?orderReference=" + orderRef)
-                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/me/orders").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.razorpayOrderId", startsWith("order_")))
-                .andReturn().getResponse().getContentAsString();
-
-        String rzpOrderId = objectMapper.readTree(rzpResp).get("data").get("razorpayOrderId").asText();
-        String rzpPaymentId = "pay_simulated_" + System.currentTimeMillis();
-        String validSignature = paymentService.generateSimulatedSignature(rzpOrderId, rzpPaymentId);
-
-        // 7. Verify Payment with HMAC-SHA256 Signature
-        PaymentVerificationRequest verifyReq = new PaymentVerificationRequest(orderRef, rzpOrderId, rzpPaymentId, validSignature);
-        mockMvc.perform(post("/api/v1/payments/razorpay/verify")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(verifyReq)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
-
-        // 8. Order is now CONFIRMED and has an automated tracking shipment
-        mockMvc.perform(get("/api/v1/me/orders/" + orderRef)
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
-                .andExpect(jsonPath("$.data.trackingNumber", startsWith("AW-EXP-")))
-                .andExpect(jsonPath("$.data.shipmentStatus").value("ORDER_PROCESSED"));
+                .andExpect(jsonPath("$.data", hasSize(0)));
+        org.junit.jupiter.api.Assertions.assertEquals(0, orderRepository.count());
     }
 
     @Test

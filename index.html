@@ -3,30 +3,33 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="/" />
     <meta name="theme-color" content="#071b16" />
-    <meta name="description" content="Atelier Watch — An independent luxury horology discovery and technical comparison platform." />
-    <title>Atelier Watch — Horology in Motion</title>
+    <meta name="description" content="Dial & Form — A premium, independent Rolex-focused watch storefront." />
+    <title>Dial &amp; Form — Premium Watches</title>
     <link rel="preload" as="image" href="assets/frames/frame_0001.webp" type="image/webp" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="storefront.css?v=20261023-auth-retry-nav" />
     <script src="app.js" defer></script>
-    <script src="js/api.js" defer></script>
-    <script src="js/ui.js" defer></script>
+    <script src="js/api.js?v=20261020-supabase-redirect" defer></script>
+    <script src="js/ui.js?v=20261020-demo-labels" defer></script>
+    <script src="js/storefront.js?v=20261023-auth-retry-nav" defer></script>
   </head>
   <body>
     <main>
-      <section class="scroll-story" id="hero" aria-label="Atelier watch in motion">
+      <section class="scroll-story" id="hero" aria-label="Watch in motion">
         <div class="sticky-stage">
           <canvas class="watch-canvas" aria-label="Gold watch assembling in a cinematic sequence"></canvas>
           <div class="scene-shade" aria-hidden="true"></div>
 
           <header class="site-header">
-            <a class="wordmark" href="#hero" aria-label="Atelier Watch">ATELIER WATCH</a>
+            <a class="wordmark" href="#hero" aria-label="Dial &amp; Form">DIAL &amp; FORM</a>
             <nav class="main-nav" aria-label="Main navigation">
               <a href="#story">The Story</a>
               <a href="#details">Craftsmanship</a>
-              <button class="nav-link-btn" type="button" data-open-catalog>Catalog</button>
-              <button class="nav-link-btn" type="button" data-open-cart id="cart-nav-btn">Bag (<span id="cart-nav-count">0</span>)</button>
-              <button class="nav-cta" type="button" data-open-auth id="auth-nav-btn">Sign In</button>
+              <a href="/brands">Brands</a>
+              <a href="/cart" id="cart-nav-btn">Bag (<span id="cart-nav-count">0</span>)</a>
+              <a class="nav-cta" href="/login" id="auth-nav-btn">Sign In</a>
             </nav>
             <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
               <span></span><span></span>
@@ -36,15 +39,15 @@
           <div class="hero-copy">
             <p class="eyebrow"><span class="eyebrow-mark"></span> Haute Horlogerie</p>
             <h1>Time, in<br /><em>its own orbit.</em></h1>
-            <p class="hero-description">An architectural study in mechanical precision. Discover curated masterpieces, compare technical calibers, and build your private collection.</p>
+            <p class="hero-description">Sign in to browse Rolex watches, review each model’s specifications, save favorites, and manage your shopping bag.</p>
             <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
               <a class="text-link" href="#story">Enter the story <span aria-hidden="true">↘</span></a>
-              <button class="btn-primary" type="button" data-open-catalog style="padding: 10px 18px; font-size: 8px;">Explore Catalog</button>
+              <a class="btn-primary" href="/watches" style="padding: 10px 18px; font-size: 8px;">Explore Collection</a>
             </div>
           </div>
 
           <div class="hero-caption" aria-hidden="true">
-            <span>ATELIER HOROLOGY</span>
+            <span>DIAL &amp; FORM HOROLOGY</span>
             <span>FORM / FUNCTION / FLIGHT</span>
           </div>
 
@@ -85,7 +88,7 @@
           <h2>Every detail<br /><em>has its place.</em></h2>
           <p>From the first glint of gold to the final measured tick, a study in harmony emerges.</p>
           <div style="margin-top: 24px;">
-            <button class="btn-primary" type="button" data-open-catalog>Browse All Models</button>
+            <a class="btn-primary" href="/watches">Browse All Models</a>
           </div>
         </div>
         <div class="detail-list">
@@ -116,20 +119,49 @@
         </div>
       </section>
 
+      <section class="home-curation-section" aria-labelledby="home-collections-title">
+        <div class="home-section-heading">
+          <p class="eyebrow dark-eyebrow">A considered collection</p>
+          <h2 id="home-collections-title">Find your way<br /><em>through time.</em></h2>
+          <p>Explore purposeful dive instruments, precise chronographs, and world-time companions.</p>
+        </div>
+        <div class="collection-grid">
+          <a class="collection-tile collection-tile-dark" href="/watches?category=diving"><span>01 / THE ELEMENTS</span><strong>Dive watches</strong><i>Explore the collection ↗</i></a>
+          <a class="collection-tile collection-tile-green" href="/watches?category=chronograph"><span>02 / MEASURED MOTION</span><strong>Chronographs</strong><i>Explore the collection ↗</i></a>
+          <a class="collection-tile collection-tile-gold" href="/watches?category=travel-dual-time"><span>03 / BEYOND THE HOUR</span><strong>Travel & dual time</strong><i>Explore the collection ↗</i></a>
+        </div>
+      </section>
+
+      <section class="home-brands-section" aria-labelledby="home-brands-title">
+        <div><p class="eyebrow">Rolex catalog</p><h2 id="home-brands-title">One collection,<br /><em>considered in detail.</em></h2></div>
+        <div id="home-brands" class="home-brand-list"><a href="/watches">Browse the Rolex collection <span aria-hidden="true">↗</span></a></div>
+      </section>
+
+      <section class="home-craft-section" aria-label="Craftsmanship">
+        <p class="eyebrow dark-eyebrow">The quiet art of precision</p>
+        <h2>Made to measure<br /><em>more than time.</em></h2>
+        <p>Inside every mechanical movement, energy becomes rhythm. Explore each caliber's architecture, reserve, materials, and finishing in a dedicated technical dossier.</p>
+        <a class="btn-primary" href="/watches">Explore the technical dossiers</a>
+      </section>
+
       <footer class="closing-section" id="closing">
-        <p class="eyebrow">Atelier Watch Platform</p>
+        <p class="eyebrow">Dial &amp; Form Watch Journal</p>
         <h2>Make time<br /><em>your own.</em></h2>
         <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 40px; flex-wrap: wrap;">
-          <button class="btn-primary" type="button" data-open-catalog style="padding: 16px 32px;">Open Watch Discovery</button>
+          <a class="btn-primary" href="/watches" style="padding: 16px 32px;">Open Watch Discovery</a>
+          <a class="footer-link" href="/login">Your account <span aria-hidden="true">↗</span></a>
           <a class="footer-link" href="#hero">Return to the beginning <span aria-hidden="true">↑</span></a>
         </div>
         <div class="footer-bottom">
-          <span>ATELIER WATCH · HOROLOGY PLATFORM</span>
-          <span>DISCOVERY / SPECIFICATIONS / COMPARISON</span>
-          <span>SPRING BOOT 3.3 · POSTGRESQL · © 2026</span>
+          <span>DIAL &amp; FORM · INDEPENDENT ROLEX WATCH STOREFRONT</span>
+          <span><a href="/brands">BRANDS</a> · <a href="/watches">WATCHES</a> · <a href="/cart">SHOPPING BAG</a></span>
+          <span><a href="mailto:hello@dialandform.example">CONTACT</a> · <a href="#policies">POLICIES</a> · © 2026</span>
         </div>
+        <p class="footer-note" id="policies">Dial &amp; Form is an independent storefront and is not affiliated with or authorized by Rolex. Product references and specifications are presented for identification; availability and pricing must be confirmed before purchase.</p>
       </footer>
     </main>
+
+    <div id="route-app" hidden></div>
 
     <!-- =====================================================================
          1. Watch Discovery Catalog Modal
@@ -193,25 +225,6 @@
         </div>
         <div class="modal-body" id="detail-content">
           <!-- Dynamically populated -->
-        </div>
-      </div>
-    </div>
-
-    <!-- =====================================================================
-         3. Side-by-Side Comparison Matrix Modal
-         ===================================================================== -->
-    <div class="atelier-modal" id="compare-modal" role="dialog" aria-modal="true">
-      <div class="modal-backdrop"></div>
-      <div class="modal-container" style="max-width: 1280px;">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <h3>Horological Comparison Matrix</h3>
-            <p class="modal-subtitle">Direct Specification Comparison</p>
-          </div>
-          <button class="modal-close" type="button" aria-label="Close comparison">✕</button>
-        </div>
-        <div class="modal-body" id="compare-content">
-          <!-- Dynamically populated from /api/v1/watches/compare -->
         </div>
       </div>
     </div>
@@ -310,7 +323,7 @@
         <div class="modal-header">
           <div class="modal-title-group">
             <h3>Your Shopping Bag</h3>
-            <p class="modal-subtitle">Insured White-Glove Horological Delivery</p>
+            <p class="modal-subtitle">Delivery details confirmed with your order</p>
           </div>
           <button class="modal-close" type="button" aria-label="Close bag">✕</button>
         </div>
@@ -324,8 +337,8 @@
               <span id="cart-subtotal" style="font-weight: 500; font-family: var(--serif); font-size: 16px;">$0</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 12px;">
-              <span style="color: rgba(244, 239, 224, 0.6);">Insured Armored Express</span>
-              <span style="color: var(--gold);">Complimentary ($0)</span>
+              <span style="color: rgba(244, 239, 224, 0.6);">Delivery charges</span>
+              <span style="color: var(--gold);">Confirmed at checkout</span>
             </div>
             <div style="display: flex; gap: 12px;">
               <button class="btn-primary" id="btn-proceed-checkout" style="flex: 1;">Proceed to Checkout</button>
@@ -345,7 +358,7 @@
         <div class="modal-header">
           <div class="modal-title-group">
             <h3>Secure Checkout</h3>
-            <p class="modal-subtitle">Direct Vault Dispatch & Escrow Payment</p>
+            <p class="modal-subtitle">Order details and a development payment demo</p>
           </div>
           <button class="modal-close" type="button" aria-label="Close checkout">✕</button>
         </div>
@@ -365,40 +378,54 @@
                   </div>
                   <div class="form-group">
                     <label for="ship-phone">Contact Phone</label>
-                    <input type="tel" id="ship-phone" placeholder="+1-555-019-2834" required />
+                    <input type="tel" id="ship-phone" placeholder="+91 98765 43210" autocomplete="tel" pattern="^\\+?[0-9][0-9 ()-]{6,28}$" required />
                   </div>
                 </div>
                 <div class="form-group">
                   <label for="ship-street">Street Address</label>
-                  <input type="text" id="ship-street" placeholder="742 Evergreen Terrace" required />
+                  <input type="text" id="ship-street" placeholder="House number and street" autocomplete="address-line1" required />
+                </div>
+                <div class="form-group">
+                  <label for="ship-address2">Apartment, suite, or area <span class="optional-label">Optional</span></label>
+                  <input type="text" id="ship-address2" placeholder="Apartment, suite, landmark" autocomplete="address-line2" />
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                   <div class="form-group">
                     <label for="ship-city">City</label>
-                    <input type="text" id="ship-city" placeholder="New York" required />
+                    <input type="text" id="ship-city" placeholder="Mumbai" autocomplete="address-level2" required />
                   </div>
                   <div class="form-group">
                     <label for="ship-state">State / Province</label>
-                    <input type="text" id="ship-state" placeholder="NY" required />
+                    <input type="text" id="ship-state" placeholder="Maharashtra" autocomplete="address-level1" required />
                   </div>
                   <div class="form-group">
-                    <label for="ship-postal">Postal Code</label>
-                    <input type="text" id="ship-postal" placeholder="10021" required />
+                    <label for="ship-postal">PIN / Postal Code</label>
+                    <input type="text" id="ship-postal" placeholder="400001" autocomplete="postal-code" inputmode="numeric" required />
                   </div>
+                </div>
+                <div class="form-group">
+                  <label for="ship-country">Country</label>
+                  <select id="ship-country" autocomplete="country-name" required>
+                    <option value="India" selected>India</option>
+                    <option value="United States">United States</option>
+                    <option value="United Kingdom">United Kingdom</option>
+                    <option value="United Arab Emirates">United Arab Emirates</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
               </form>
             </div>
 
             <div class="checkout-order-review" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(244, 239, 224, 0.1);">
-              <h4 style="font-family: var(--serif); font-size: 15px; color: var(--gold); margin-bottom: 12px; letter-spacing: 0.05em;">2. Horological Escrow & Payment</h4>
+              <h4 style="font-family: var(--serif); font-size: 15px; color: var(--gold); margin-bottom: 12px; letter-spacing: 0.05em;">2. Development payment demo</h4>
               <div id="checkout-quote-details" style="background: rgba(0,0,0,0.25); padding: 16px; border: 1px solid rgba(244, 239, 224, 0.08); margin-bottom: 18px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;">
                   <span style="color: rgba(244, 239, 224, 0.6);">Items Subtotal:</span>
                   <span id="checkout-subtotal" style="font-weight: 500;">$0</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;">
-                  <span style="color: rgba(244, 239, 224, 0.6);">Armored Courier & Insurance:</span>
-                  <span style="color: var(--gold);">Complimentary ($0)</span>
+                  <span style="color: rgba(244, 239, 224, 0.6);">Delivery charges:</span>
+                  <span style="color: var(--gold);">Confirmed at checkout</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 16px; font-family: var(--serif); border-top: 1px solid rgba(244, 239, 224, 0.1); padding-top: 10px; margin-top: 10px;">
                   <span>Final Total:</span>
@@ -408,25 +435,16 @@
 
               <div id="checkout-payment-actions">
                 <button class="btn-primary" id="btn-pay-razorpay" style="width: 100%; padding: 16px; font-size: 11px;">
-                  Authorize Payment with Razorpay (Test Mode)
+                  Simulate demo payment (no charge)
                 </button>
                 <p style="font-size: 10px; color: rgba(244, 239, 224, 0.45); text-align: center; margin-top: 10px;">
-                  Escrow verified with HMAC-SHA256 signature verification. Real test credentials enabled.
+                  Development demo only. No payment is processed, no card details are collected, and no shipment is created.
                 </p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- =====================================================================
-         7. Floating Compare Tray
-         ===================================================================== -->
-    <div class="compare-tray" id="compare-tray">
-      <span class="compare-tray-badge" id="compare-count">0</span>
-      <span style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;">Watches Selected</span>
-      <button class="btn-primary" id="open-compare-btn" style="padding: 8px 16px; font-size: 9px;">Compare Now</button>
     </div>
 
     <!-- Toast Notifications Container -->

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Dial & Form storefront server with restricted static files and API proxy."""
 
-from http.client import HTTPConnection
+from http.client import HTTPConnection, HTTPSConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from mimetypes import guess_type
 from pathlib import Path
@@ -100,9 +100,12 @@ class StorefrontHandler(BaseHTTPRequestHandler):
                 forwarded_headers[name] = value
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length) if length else None
-        connection = HTTPConnection(self.server.backend_host, self.server.backend_port, timeout=20)
+        connection_type = HTTPSConnection if self.server.backend_scheme == "https" else HTTPConnection
+        connection = connection_type(self.server.backend_host, self.server.backend_port, timeout=20)
         try:
-            connection.request(self.command, parsed.path + (f"?{parsed.query}" if parsed.query else ""), body, forwarded_headers)
+            target = self.server.backend_base_path + parsed.path
+            target += f"?{parsed.query}" if parsed.query else ""
+            connection.request(self.command, target, body, forwarded_headers)
             response = connection.getresponse()
             payload = response.read()
             self.send_response(response.status, response.reason)
@@ -185,17 +188,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Serve the Dial & Form storefront.")
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
+    parser.add_argument("--backend-url", default=os.environ.get("BACKEND_URL", ""))
     parser.add_argument("--backend-hostport", default=os.environ.get("BACKEND_HOSTPORT", "127.0.0.1:8080"))
     parser.add_argument("--backend-port", type=int, default=int(os.environ.get("BACKEND_PORT", "8080")))
     args = parser.parse_args()
     server = ThreadingHTTPServer((args.host, args.port), StorefrontHandler)
     if args.backend_hostport == "127.0.0.1:8080" and args.backend_port != 8080:
         args.backend_hostport = f"127.0.0.1:{args.backend_port}"
-    backend = urlsplit(f"//{args.backend_hostport}")
+    backend = urlsplit(args.backend_url) if args.backend_url else urlsplit(f"//{args.backend_hostport}")
     if not backend.hostname:
-        raise SystemExit("BACKEND_HOSTPORT must be in host:port form.")
+        raise SystemExit("BACKEND_URL must be a valid URL or BACKEND_HOSTPORT must be in host:port form.")
+    if args.backend_url and backend.scheme not in ("http", "https"):
+        raise SystemExit("BACKEND_URL must use http or https.")
+    server.backend_scheme = backend.scheme or "http"
     server.backend_host = backend.hostname
-    server.backend_port = backend.port or 8080
+    server.backend_port = backend.port or (443 if server.backend_scheme == "https" else 8080)
+    server.backend_base_path = backend.path.rstrip("/")
     print(f"Dial & Form available at http://{args.host}:{args.port}")
     try:
         server.serve_forever()

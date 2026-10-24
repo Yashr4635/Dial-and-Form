@@ -57,11 +57,11 @@ services:
     envVars:
       - key: HOST
         value: 0.0.0.0
-      - key: BACKEND_HOSTPORT
+      - key: BACKEND_URL
         fromService:
           type: web
           name: dial-and-form-api
-          property: hostport
+          envVarKey: RENDER_EXTERNAL_URL
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY

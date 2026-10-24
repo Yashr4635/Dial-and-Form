@@ -38,8 +38,14 @@ public class WatchService {
             Pageable pageable
     ) {
         return watchRepository.findFiltered(
-                search, brand, collectionSlug, categorySlug, movementType, caseMaterial, minPrice, maxPrice, pageable
+                normalizeFilter(search), normalizeFilter(brand), normalizeFilter(collectionSlug),
+                normalizeFilter(categorySlug), normalizeFilter(movementType), normalizeFilter(caseMaterial),
+                minPrice, maxPrice, pageable
         ).map(WatchSummaryResponse::from);
+    }
+
+    private String normalizeFilter(String value) {
+        return value == null ? "" : value.trim();
     }
 
     public WatchDetailResponse getWatchBySlug(String slug) {

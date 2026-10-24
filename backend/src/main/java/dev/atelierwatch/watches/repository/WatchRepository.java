@@ -23,12 +23,12 @@ public interface WatchRepository extends JpaRepository<Watch, Long>, JpaSpecific
     List<Watch> findByFeaturedTrueAndStatusAndBrandIgnoreCase(String status, String brand);
 
     @Query("SELECT w FROM Watch w WHERE w.status = 'PUBLISHED' AND LOWER(w.brand) = 'rolex' " +
-           "AND (:search IS NULL OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.brand) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.referenceNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.caliber) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "AND (:brand IS NULL OR LOWER(w.brand) = LOWER(:brand)) " +
-           "AND (:collectionSlug IS NULL OR w.collectionSlug = :collectionSlug) " +
-           "AND (:categorySlug IS NULL OR w.category.slug = :categorySlug) " +
-           "AND (:movementType IS NULL OR w.movementType = :movementType) " +
-           "AND (:caseMaterial IS NULL OR LOWER(w.caseMaterial) LIKE LOWER(CONCAT('%', :caseMaterial, '%'))) " +
+           "AND (:search = '' OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.brand) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.referenceNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.caliber) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:brand = '' OR LOWER(w.brand) = LOWER(:brand)) " +
+           "AND (:collectionSlug = '' OR w.collectionSlug = :collectionSlug) " +
+           "AND (:categorySlug = '' OR w.category.slug = :categorySlug) " +
+           "AND (:movementType = '' OR w.movementType = :movementType) " +
+           "AND (:caseMaterial = '' OR LOWER(w.caseMaterial) LIKE LOWER(CONCAT('%', :caseMaterial, '%'))) " +
            "AND (:minPrice IS NULL OR w.price >= :minPrice) " +
            "AND (:maxPrice IS NULL OR w.price <= :maxPrice)")
     Page<Watch> findFiltered(

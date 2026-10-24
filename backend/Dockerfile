@@ -16,11 +16,12 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
 
 COPY --from=builder /workspace/target/*.jar app.jar
 COPY render-entrypoint.sh /app/render-entrypoint.sh
 RUN chmod 755 /app/render-entrypoint.sh
+
+USER appuser
 
 ENV SPRING_PROFILES_ACTIVE=prod
 EXPOSE 8080

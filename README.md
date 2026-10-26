@@ -1,178 +1,302 @@
-# Dial & Form — Premium Watch Storefront
+# Dial & Form
 
-[![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Flyway](https://img.shields.io/badge/Flyway-Migrations-red.svg)](https://flywaydb.org/)
-[![Swagger](https://img.shields.io/badge/Swagger-OpenAPI%203-85EA2D.svg)](http://localhost:8080/swagger-ui.html)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
+**A premium watch storefront prototype with a Rolex-focused catalog, a scroll-driven visual sequence, and a full-stack commerce API.**
 
-An independent, Rolex-focused storefront for browsing watch models, viewing detailed specifications, saving favorites, and managing a shopping bag. Built around a **cinematic scroll-driven HTML5 canvas animation** (240 WebP frame sequence with predictive caching), with a **Java 21 / Spring Boot 3.3 REST API**, automated **Flyway** schema migrations, stateless **JWT authentication**, and persistent user wishlists. Dial & Form is not represented as a Rolex-authorized retailer.
+[![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot 3.3.4](https://img.shields.io/badge/Spring%20Boot-3.3.4-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![GitHub Actions](https://github.com/Yashr4635/Dial-and-Form/actions/workflows/ci.yml/badge.svg)](https://github.com/Yashr4635/Dial-and-Form/actions/workflows/ci.yml)
 
----
+**Staging demo:** [dial-and-form-storefront.onrender.com](https://dial-and-form-storefront.onrender.com) · last checked 26 October 2026
+**Source:** [github.com/Yashr4635/Dial-and-Form](https://github.com/Yashr4635/Dial-and-Form)
+**Status:** Deployed staging prototype. It is not a production-ready store or an authorized Rolex retailer.
 
-## Architecture Overview
+The hosted URLs were last checked on 2026-10-26. The working tree contains uncommitted storefront changes, so the deployed site may not yet include them.
 
-```mermaid
-graph TD
-    User([Browser Client]) -->|HTTP / 8004| Frontend[Vanilla HTML5 / CSS3 / Canvas Engine]
-    Frontend -->|REST API / 8084| Security[Spring Security + JWT Filter]
-    Security --> Controller[Spring Web Controllers /api/v1]
-    Controller --> Service[Domain Services & Validation]
-    Service --> Repository[Spring Data JPA Repositories]
-    Repository --> Flyway[Flyway Managed Migrations]
-    Flyway --> Database[(PostgreSQL 16 / H2 Dev Mode)]
-```
+## Contents
 
----
+- [Overview](#overview)
+- [Demo and links](#demo-and-links)
+- [Features and current limits](#features-and-current-limits)
+- [Technology stack](#technology-stack)
+- [Architecture](#architecture)
+- [User workflows](#user-workflows)
+- [Repository structure](#repository-structure)
+- [Getting started](#getting-started)
+- [Environment configuration](#environment-configuration)
+- [API documentation](#api-documentation)
+- [Database](#database)
+- [Authentication and security](#authentication-and-security)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Screenshots](#screenshots)
+- [Roadmap](#roadmap)
+- [Engineering notes](#engineering-notes)
+- [License and contact](#license-and-contact)
 
-## Key Features
+## Overview
 
-1. **Cinematic Scroll Animation**:
-   - 240 pre-rendered WebP frames loaded on demand into an HTML5 Canvas 2D context (`alpha: false, desynchronized: true`).
-   - Predictive LRU frame cache (`AHEAD = 10`, `BEHIND = 3`, capped DPR at 1.75) ensuring smooth reverse-scroll reassembly without white flashes.
-   - Built-in `prefers-reduced-motion` compliance.
+Dial & Form is a watch storefront prototype for people who want to browse premium watches, review reference-level specifications, and use account-based shopping features. Its homepage preserves a 240-frame scroll-controlled watch sequence. The catalog is seeded with 17 Rolex references and supports search, collection filtering, sorting, pagination, and product details.
 
-2. **Rolex-Focused Watch Storefront**:
-   - Debounced real-time search across model names, brands, and calibers.
-   - Dedicated collection, brand, watch detail, account, cart, checkout, order, and admin routes.
-   - Multi-criteria filtering by brand, category, movement type, case material, and price range.
-   - Responsive editorial pages styled in a refined palette (`#071b16`, `#f3f0e8`, `#c9a66c`).
+The project pairs a native HTML/CSS/JavaScript storefront with a Python static server and proxy, a Java Spring Boot REST API, PostgreSQL persistence, and Supabase Auth integration. Price and stock are intentionally unavailable until verified. Catalog items therefore cannot be purchased. Brochure-derived product images remain private while redistribution rights are unresolved.
 
-3. **Technical Dossier & Specifications**:
-   - In-depth horological specifications: Caliber, movement type, case diameter/thickness, water resistance depth rating, power reserve hours, dial color, and complications.
+## Demo and links
 
-4. **Shopping, Authentication & Wishlists**:
-   - Stateless JWT authentication (`/api/v1/auth/login`, `/api/v1/auth/register`, `/api/v1/users/me`).
-   - Passwords securely hashed with BCrypt.
-   - Database-backed user wishlists (`/api/v1/me/wishlist`) synced automatically across sessions.
-   - Cart and checkout validation require configured prices and stock; unpriced catalog items remain unavailable for purchase.
+| Resource | Link | Notes |
+|---|---|---|
+| Storefront | [Open staging site](https://dial-and-form-storefront.onrender.com) | Render staging; last read-only checked 2026-10-26 |
+| API health | [API health endpoint](https://dial-and-form-api.onrender.com/actuator/health) | HTTP 200 / UP on 2026-10-26; health endpoint only |
+| Source repository | [GitHub repository](https://github.com/Yashr4635/Dial-and-Form) | Remote verified from local Git configuration |
+| API reference | Local Swagger UI at http://localhost:8084/swagger-ui.html after API startup | Public staging Swagger availability was not verified |
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System, request, auth, deployment and entity diagrams |
+| API routes | [docs/API.md](docs/API.md) | Methods, access policy and DTO references |
+| Current status | [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) | Verified and unverified capabilities |
 
-5. **Backend Engineering**:
-   - Spring Boot Actuator health and metrics endpoints (`/actuator/health`).
-   - Interactive Swagger UI documentation (`/swagger-ui.html`).
-   - Dual-profile configuration (`dev` with in-memory H2, `prod` with containerized PostgreSQL).
+Staging availability can change, and an HTTP response does not prove the full user journey is ready.
 
----
+## Features and current limits
 
-## Technology Stack
+### Implemented
 
-- **Storefront**: Semantic HTML5, custom responsive CSS, modern JavaScript, and Canvas 2D for the 240-frame scroll animation.
-- **Local web server**: Python 3 `ThreadingHTTPServer` serves the frontend and proxies `/api/v1` requests during development. This is a development server, not a production host.
-- **Backend API**: Java 21, Spring Boot 3.3.4, Spring Web, Spring Data JPA, Spring Security, Bean Validation, and Actuator.
-- **Authentication**: Supabase Auth email/password sessions, verified server-side against Supabase Auth before mapping the stable provider ID to the existing local user row. Existing local JWT/password endpoints remain available during setup and account transition.
-- **Data**: PostgreSQL 16 for containerized deployments; H2 in-memory database for local development; Flyway for schema and catalog migrations.
-- **Store functions**: Catalog, product specifications, account registration/sign-in, wishlist, cart, shipping addresses, orders, and shipment status records.
-- **Payment status**: Development-only simulated payment flow. It does not contact Razorpay or process funds; live gateway credentials and integration are not configured.
-- **Catalog media**: Original 240 WebP animation frames plus local catalog image mapping. Brochure-derived product images remain in the ignored private review folder until redistribution rights are cleared.
-- **API documentation**: springdoc-openapi (`/v3/api-docs` and Swagger UI).
-- **Build and delivery**: Maven Wrapper, Docker Compose, and GitHub Actions CI. No public hosting target is configured.
+- 240 sequential WebP frames rendered on canvas in response to scroll progress, including reverse-scroll reassembly.
+- Reduced-motion handling, responsive canvas resizing, and bounded nearby-frame loading in the existing animation code.
+- Rolex-focused catalog with 17 verified references in the backend.
+- Catalog API support for search, collection/category, movement/material/price filters, sorting and pagination.
+- Product detail records with source brochure provenance.
+- Supabase email OTP verification and password setup flow in frontend code.
+- Backend identity mapping and APIs for cart, wishlist, addresses, orders, payment status and shipments.
+- Price and stock validation that prevents products without configured values from entering purchasable checkout.
 
-### Configuration still required for a live store
+### Known limits
 
-- Supabase project URL and publishable key, email confirmation settings, and allowed redirect URLs. Never configure a service-role key in the browser.
-- Verified selling prices, inventory quantities, currency, taxes, shipping rates, and return policy.
-- A selected payment gateway with sandbox credentials and a verified webhook flow.
-- Cleared product-image rights and a production hosting/domain configuration.
+- OTP email delivery has not passed a fresh end-to-end test; prior user screenshots showed delivery errors.
+- The prior homepage used three category filters that returned no products. The current uncommitted homepage change points those tiles to explicit collection routes; this updated navigation has not yet been browser-tested or deployed.
+- Full mobile/browser behavior and authenticated shopping journeys have not been independently verified.
+- No current verified selling prices or stock quantities are configured.
+- No live payment processor, real transaction, or shipping carrier is configured. Payment simulation is not a real payment.
+- Brochure images are private review candidates and are not cleared for public redistribution.
+- Homepage animation target is Sky-Dweller reference 326935-0005. Catalog reference 336935 is different and is not a replacement.
+- No separate animated watch-hand overlay is implemented.
 
-Until those items are configured, unpriced products cannot be purchased and the payment workflow remains clearly marked as a local demo.
+## Technology stack
 
----
+| Layer | Technology | Purpose |
+|---|---|---|
+| Frontend | HTML, CSS, native JavaScript, Canvas | Storefront and scroll-driven animation |
+| Local server | Python standard library | Static file server, route fallback and API proxy |
+| Backend | Java 21, Spring Boot 3.3.4 | REST API, validation, security, persistence and health |
+| Data access | Spring Data JPA / Hibernate | Relational persistence |
+| Database | PostgreSQL 16; H2 for dev/tests | Staging and local/test database |
+| Migrations | Flyway | Versioned schema and catalog migrations V1–V6 |
+| Authentication | Supabase Auth JavaScript SDK v2 | Email OTP and password flow; exact patch version is not pinned |
+| Legacy auth support | Spring Security and JJWT 0.12.6 | API token authentication and compatibility paths |
+| API description | Springdoc OpenAPI 2.6.0 | OpenAPI document and local Swagger UI |
+| Build/test | Maven Wrapper 3.10.0, JUnit, Spring Boot Test | Backend build and tests |
+| Runtime checks | Node.js 20 in CI | JavaScript syntax and animation asset-count checks |
+| Containerization | Docker, Docker Compose | API image and optional local container setup |
+| Hosting | Render | Staging storefront, API and PostgreSQL |
+| CI | GitHub Actions | JavaScript syntax/frame checks and Maven tests |
 
-## REST API Specification
+No AI/ML model, analytics product, frontend framework/bundler, direct Resend API client, or real payment gateway was found in the repository. Resend can be configured as SMTP transport through Supabase, but the application does not call its API.
 
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/watches` | Public | Paginated, searchable, filtered watch catalog |
-| `GET` | `/api/v1/watches/{slug}` | Public | Detailed specifications of a watch by unique slug |
-| `GET` | `/api/v1/watches/featured` | Public | Curated spotlight timepieces |
-| `GET` | `/api/v1/watches/brands` | Public | Distinct list of brands in the catalog |
-| `GET` | `/api/v1/categories` | Public | All horological categories |
-| `POST`| `/api/v1/auth/login` | Public | Authenticate user and receive JWT bearer token |
-| `POST`| `/api/v1/auth/register` | Public | Register a new collector account |
-| `GET` | `/api/v1/users/me` | User | Get current authenticated user profile |
-| `GET` | `/api/v1/me/wishlist` | User | Get authenticated user's saved wishlist |
-| `PUT` | `/api/v1/me/wishlist/{id}` | User | Add timepiece to wishlist |
-| `DELETE`| `/api/v1/me/wishlist/{id}` | User | Remove timepiece from wishlist |
-| `POST`| `/api/v1/admin/watches` | Admin | Create a new watch entry |
-| `PATCH`| `/api/v1/admin/watches/{id}`| Admin | Update an existing watch |
-| `DELETE`| `/api/v1/admin/watches/{id}`| Admin | Archive a watch entry |
-| `GET` | `/actuator/health` | Public | Application and database health status |
+## Architecture
 
----
+The browser loads the storefront and uses Supabase Auth for identity. Storefront API requests go to the Python service, which proxies them to Spring Boot. The API uses JPA and Flyway-managed PostgreSQL tables.
 
-## Getting Started
+~~~mermaid
+flowchart LR
+    User[Visitor or signed-in customer] --> Browser[Browser storefront]
+    Browser <-->|HTTP pages and same-origin API requests| Store[Render Python storefront and proxy]
+    Store -->|HTTP REST| API[Render Spring Boot API]
+    API -->|JPA / Flyway| DB[(Render PostgreSQL 16)]
+    Browser -->|Supabase Auth SDK| Auth[Supabase Auth]
+    API -->|verify provider identity| Auth
+~~~
+
+Detailed request, authentication, deployment and database diagrams are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## User workflows
+
+### Browse the catalog
+
+1. The browser loads the storefront shell from the Python service.
+2. The frontend requests catalog data through the storefront API proxy.
+3. Spring Boot applies search/filter/sort/page parameters and queries PostgreSQL.
+4. The API returns a response envelope and page data; frontend code renders product cards/details.
+
+### Create an account and sign in
+
+1. The browser Supabase client requests an email OTP.
+2. The user verifies the code and sets a password.
+3. The user signs in using email and password.
+4. The frontend sends a Supabase bearer token on protected API requests; the backend verifies provider identity and maps it to a local user.
+
+The code contains this flow, but email delivery remains unverified. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md).
+
+### Cart and checkout
+
+Authenticated API routes support cart, addresses, quotes and order creation. The backend validates price/stock and creates an order awaiting payment. Current catalog prices and stock are null, so checkout cannot create a purchasable order. Development-only payment simulation does not process funds.
+
+## Repository structure
+
+    .
+    ├── index.html                 Storefront shell
+    ├── styles.css                 Homepage styling
+    ├── storefront.css             Storefront page styling
+    ├── app.js                     Original 240-frame scroll animation
+    ├── js/                        API client and storefront modules
+    ├── assets/frames/             Original 240 WebP frames
+    ├── assets/private-review/     Ignored, restricted brochure candidates
+    ├── server.py                  Python static server and API proxy
+    ├── backend/
+    │   ├── src/main/java/         Spring controllers, services, entities and config
+    │   ├── src/main/resources/    Runtime profiles and Flyway migrations
+    │   ├── src/test/java/         Backend tests
+    │   ├── Dockerfile             API container build
+    │   └── mvnw                   Maven wrapper
+    ├── docs/                      Architecture, API and runbooks
+    ├── render.yaml                Render staging Blueprint
+    ├── docker-compose.yml         Optional local containers; inspect env setup first
+    ├── .env.example               Variable-name template; values not reproduced here
+    └── .github/workflows/ci.yml   CI checks
+
+The private-review directory is git-ignored and must not be copied into public assets without rights approval.
+
+## Getting started
 
 ### Prerequisites
 
-- **Java 21 LTS** (`java -version`)
-- **Python 3** (for serving the static frontend locally)
-- *(Optional)* **Docker & Docker Compose** (for PostgreSQL production mode)
+- Java 21
+- Python 3
+- Git
+- Node.js 20 only if running the same JavaScript syntax checks as CI
+- Docker Compose only if using optional containers
 
-### 1. Run Backend Locally (Zero-Configuration Dev Mode)
+### Clone the repository
 
-The backend includes a `dev` profile using an in-memory database with PostgreSQL compatibility and Flyway seeding:
+    git clone https://github.com/Yashr4635/Dial-and-Form.git
+    cd Dial-and-Form
 
-```bash
-cd backend
-SERVER_PORT=8084 ./mvnw spring-boot:run
-```
+### 1. Start the API in development mode
 
-- Swagger UI: `http://localhost:8084/swagger-ui.html`
-- Health Check: `http://localhost:8084/actuator/health`
+The default Spring profile is dev and configures an in-memory H2 database with Flyway. From the repository root:
 
-### 2. Run Frontend Locally
+    cd backend
+    SERVER_PORT=8084 sh ./mvnw spring-boot:run
 
-From the root directory (the server falls back to `index.html` for direct navigation to storefront routes):
+The API listens at http://localhost:8084. Local API docs are configured at http://localhost:8084/swagger-ui.html; health is at http://localhost:8084/actuator/health.
 
-```bash
-python3 server.py --port 8004 --backend-port 8084
-```
+### 2. Start the storefront
 
-Open `http://localhost:8004` in your web browser. The Python server serves the frontend and proxies API requests to the backend port above.
+Open a second terminal from the repository root:
 
-### 3. Connect Supabase Auth
+    python3 server.py --port 8004 --backend-port 8084
 
-The same public project URL and publishable key are needed by both the backend and the local preview server. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in each process environment before starting it. The browser SDK is loaded only when both values are present. The storefront uses this account flow:
+Then open http://localhost:8004. The Python service serves direct storefront routes and proxies API calls to the backend.
 
-1. Existing users sign in with their email and password using Supabase Auth.
-2. New users submit their name and email, verify the emailed one-time code, then create and confirm a password. They are returned to the normal sign-in form.
+### 3. Configure Supabase for auth
 
-In Supabase Authentication settings, enable the Email provider and keep email confirmation enabled. Under Email Templates → Magic Link, include `{{ .Token }}` in the message to send the code required by the confirmation form. Set the local Site URL to `http://localhost:8004`; add `http://localhost:8004/**` and `https://dial-and-form-storefront.onrender.com/**` to the allowed redirect URLs. Configure a custom SMTP sender for delivery to arbitrary users: Supabase's built-in sender is restricted to project team addresses and is heavily rate-limited. Resend is only an optional SMTP delivery provider here; Supabase Auth still creates accounts, verifies codes, and checks passwords. If using the Resend domain `dialandform.in`, first finish its DNS verification, then configure its SMTP host, port, username, password, and a From address on that verified domain in Supabase Auth SMTP settings. Keep SMTP credentials server-side and never put them in the storefront or Git.
+For the Supabase email flow, set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in the environment of both the backend and storefront processes before starting them. The storefront injects public client settings into its page; the backend uses them to validate/link identities. Configure email and redirect behavior in Supabase Auth. Never put a service-role key in the browser or commit secrets.
 
-V6 adds a nullable unique Supabase identity column; it preserves existing user IDs and their related orders, carts, and wishlists. Flyway applies it automatically at backend startup, so review and back up any persistent database before production rollout.
+Local catalog browsing can run independently of successful email delivery; authentication requires valid Supabase configuration.
 
-When someone signs in with a confirmed email already present in the local user table, the backend links the Supabase ID to that same row. New Supabase accounts get a standard customer row. Passwords remain managed by Supabase; local commerce data continues to use the current backend and database.
+### Build and tests
 
-### 4. Demo Credentials
+From repository root:
 
-- **Development seed account**: `collector@atelierwatch.dev` / `Admin@123456` (local development only; change before using any shared environment)
+    cd backend
+    sh ./mvnw package
 
----
+Run tests without packaging using:
 
-## Production Deployment with Docker Compose
+    sh ./mvnw test -B
 
-To deploy both PostgreSQL and the Spring Boot backend in containers:
+Frontend/Python syntax checks from repository root:
 
-```bash
-cp .env.example .env
-# Set SPRING_DATASOURCE_PASSWORD and generate JWT_SECRET with: openssl rand -base64 32
-docker compose up -d --build
-```
+    node --check app.js
+    node --check js/api.js
+    node --check js/ui.js
+    node --check js/storefront.js
+    python3 -m py_compile server.py
 
-## Render Staging
+See [docs/TESTING.md](docs/TESTING.md) for recorded results and limitations.
 
-The repository includes a Render Blueprint at [`render.yaml`](render.yaml). It creates a public storefront, a Spring API, and a new private-network-only PostgreSQL database in Singapore. The API applies Flyway migrations only to that newly created staging database. Brochure candidate images and the local `.env.local` file are excluded; until image rights are cleared, products use the public placeholder image.
+## Environment configuration
 
-To create the staging services, open [Deploy this repository to Render](https://render.com/deploy?repo=https://github.com/Yashr4635/Dial-and-Form), connect the `Yashr4635/Dial-and-Form` GitHub repository, and enter the Supabase project URL and **publishable** key when Render asks. Never enter a Supabase service-role/secret key or a Resend API key into frontend configuration. The backend JWT secret is generated by Render.
+Set values only in an ignored local environment file or secure process environment. This table documents names, not values.
 
-Render is configured to deploy the `main` branch only after the GitHub Actions checks pass. To publish a code change, commit it and push it to `main`; an unsaved local edit does not update the hosted site. Render Free web services can sleep when idle, and a Free Postgres database expires after 30 days, has no backups, and is for temporary staging only. Upgrade or replace the staging database before relying on it for persistent user or commerce data. This setup is not a production commerce deployment.
+| Variable | Purpose | Required when |
+|---|---|---|
+| SUPABASE_URL | Supabase project endpoint | Supabase auth; storefront and API |
+| SUPABASE_PUBLISHABLE_KEY | Browser-safe Supabase client key | Supabase auth; storefront and API |
+| FRONTEND_URL | Allowed frontend origin / API CORS | Deployed API |
+| BACKEND_URL | API origin used by storefront proxy | Deployed storefront |
+| BACKEND_HOSTPORT | Local backend host:port option for server.py | Optional local proxy |
+| BACKEND_PORT | Local backend port option | Optional local proxy |
+| PORT | Bind port for Render/runtime process | Hosting runtime |
+| HOST | Bind host for Python storefront | Optional; Render binds 0.0.0.0 |
+| SERVER_PORT | Spring Boot port override | Optional local API |
+| SPRING_PROFILES_ACTIVE | Selects Spring profile; Render uses prod | Deployment |
+| DATABASE_URL | Render-provided database URL parsed by backend | Render API |
+| SPRING_DATASOURCE_URL | JDBC database URL | Compose or explicit Spring configuration |
+| SPRING_DATASOURCE_USERNAME | Database username | PostgreSQL deployment |
+| SPRING_DATASOURCE_PASSWORD | Database password | PostgreSQL deployment |
+| JWT_SECRET | Backend token signing configuration | Configured API profile |
+| JWT_EXPIRATION_MS | Present in .env.example; runtime usage is not wired as an override | Verify before relying on it |
 
----
+Do not share keys, tokens, passwords or database URLs in issues or screenshots.
 
-## Portfolio & Interview Highlights
+## API documentation
 
-- **Predictive Canvas Animation Engine**: Engineered a frame scheduler mapping vertical scroll progress to 240 WebP assets using a directional lookahead LRU cache, preventing UI jank and maintaining 60 FPS performance without memory leaks.
-- **Decoupled Architecture**: Preserved high-performance static asset delivery while introducing an enterprise Java 21 REST backend with Spring Security and stateless JWT authentication.
-- **Relational Data Integrity**: Designed normalized PostgreSQL schemas with Flyway migrations, enforcing decimal precision for currency and composite uniqueness constraints on wishlist items.
-- **Comprehensive Test Coverage**: Implemented end-to-end integration tests using MockMvc and JUnit 5 validating security boundaries, query filtering, and OpenAPI contracts.
+Springdoc/OpenAPI is configured at /v3/api-docs and /swagger-ui.html. The local Swagger UI is configured above. Public staging docs availability was not checked. Route details are in [docs/API.md](docs/API.md).
+
+## Database
+
+PostgreSQL is used for Render staging. Local dev and test profiles use H2 in PostgreSQL compatibility mode. Flyway migrations V1–V6 define schema and data. Main entities include categories, watches, users, wishlists, addresses, carts, orders, order-item snapshots, payments and shipments.
+
+V5 archives prior published catalog rows and imports Rolex records without deleting old watch rows. V6 adds an optional Supabase identity link. The migration-preservation test uses H2, not PostgreSQL 16. Review [docs/DATABASE.md](docs/DATABASE.md) before a persistent migration.
+
+## Authentication and security
+
+Supabase Auth handles browser email OTP/password authentication. Spring Security protects customer and admin API operations and applies role checks to admin routes. Legacy API login/register routes remain. The API is stateless. Browser configuration includes only the Supabase publishable key; a service-role key must never be exposed.
+
+Catalog browsing is public in the current working tree, and the backend catalog API permits anonymous reads. The latest hosted-site check predates the uncommitted removal of storefront catalog gating, so deployed behavior still needs confirmation. OTP delivery, CORS from the deployed browser, and the full account lifecycle remain unverified.
+
+## Testing
+
+The repository has Spring Boot/JUnit tests for commerce flows, payment safety, PostgreSQL URL parsing, catalog filtering and migration preservation. GitHub Actions checks JavaScript syntax, confirms 240 animation frames exist, and runs Maven tests with Java 21. The last recorded local run on 2026-10-26 passed 17 tests with zero failures/errors/skips. This is not browser E2E coverage or proof of production readiness.
+
+## Deployment
+
+Render is configured for staging:
+
+- Storefront: https://dial-and-form-storefront.onrender.com
+- API: https://dial-and-form-api.onrender.com
+- PostgreSQL 16 staging database, Singapore region
+- GitHub Actions checks main pushes and pull requests; Render deploy is configured from main after checks pass
+
+No production environment was found. Local edits do not update the hosted site; a change must be committed and pushed to the configured branch for auto-deploy. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Screenshots
+
+No approved UI screenshots are currently stored in the repository. The 240 animation frames are application assets, not screenshots. Product brochure candidates are private. See [docs/assets/README.md](docs/assets/README.md) for screenshots to capture and their intended use.
+
+## Roadmap
+
+1. Commit/deploy and browser-test the current collection-navigation and public-catalog changes.
+2. Verify Supabase OTP delivery and the complete password/login flow.
+3. Test direct routes, back/forward navigation, responsive layouts, reduced motion and the original scroll animation in a browser.
+4. Validate V5/V6 against an isolated PostgreSQL 16 database with representative historical data.
+5. Clear image usage rights or replace candidates with approved images.
+6. Configure verified prices, inventory, tax, delivery, return and warranty data.
+7. Plan a real payment provider and production operations only after business details are ready.
+
+## Engineering notes
+
+The storefront remains framework-free. The API uses a relational domain model and versioned migrations. Product migration archives old published records, and the order model retains item snapshots. The UI and API keep products unpurchasable when price or stock is unknown. The original animation was preserved rather than overlaid with unverified watch hands.
+
+## License and contact
+
+No LICENSE file was found. The repository should not be described as MIT-licensed or as granting unrestricted reuse until a license is selected and added.
+
+The GitHub repository owner is [Yashr4635](https://github.com/Yashr4635). No LinkedIn profile URL or public contact address was verified. Proposed LinkedIn wording is in [docs/LINKEDIN_PROJECT_UPDATE.md](docs/LINKEDIN_PROJECT_UPDATE.md).

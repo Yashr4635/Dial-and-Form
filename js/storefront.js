@@ -203,16 +203,17 @@
     function renderAuth(register = false) {
         const params = queryNow();
         const safeReturn = params.get("returnTo") && params.get("returnTo").startsWith("/") && !params.get("returnTo").startsWith("//") ? params.get("returnTo") : "/account";
-        return `<main class="route-main route-auth">${pageHeading(register ? "Collector account" : "Welcome back", register ? "Begin your collection." : "Your collection awaits.", register ? "Create a collector account to save pieces and manage orders." : "Sign in to access your saved watches, addresses, and orders.", register ? "Register" : "Sign in")}
+        const registeredMessage = !register && params.get("registered") === "1";
+        return `<main class="route-main route-auth">${pageHeading(register ? "Collector account" : "Welcome back", register ? "Begin your collection." : "Your collection awaits.", register ? "Verify your email first. You’ll create your password in the next step." : "Sign in with the email address and password you created.", register ? "Register" : "Sign in")}
           <form class="editorial-form" id="auth-form" data-auth-mode="${register ? "register" : "login"}" novalidate>
             ${register ? `<label>Full name<input name="displayName" autocomplete="name" minlength="2" maxlength="100" required /></label><p class="field-error" data-error-for="displayName"></p>` : ""}
             <label>Email address<input name="email" type="email" autocomplete="email" required /></label><p class="field-error" data-error-for="email"></p>
-            <label>Password<span class="password-control"><input name="password" type="password" autocomplete="${register ? "new-password" : "current-password"}" minlength="8" required /><button type="button" class="password-toggle" aria-label="Show password">Show</button></span></label><p class="field-error" data-error-for="password"></p>
-            <div class="form-alert" role="alert" aria-live="polite"></div>
-            <button class="button button-dark form-submit" type="submit">${register ? "Create collector account" : "Sign in"}</button>
+            ${register ? "" : `<label>Password<span class="password-control"><input name="password" type="password" autocomplete="current-password" minlength="8" required /><button type="button" class="password-toggle" aria-label="Show password">Show</button></span></label><p class="field-error" data-error-for="password"></p>`}
+            <div class="form-alert" role="alert" aria-live="polite">${registeredMessage ? "Your email is verified and your password is set. Sign in to continue." : ""}</div>
+            <button class="button button-dark form-submit" type="submit">${register ? "Send verification code" : "Sign in"}</button>
             ${register ? `<button class="button button-light" id="auth-resend-confirmation" type="button" hidden>Send confirmation code</button>` : ""}
             <p class="form-switch">${register ? `Already registered? <a href="/login?returnTo=${encodeURIComponent(safeReturn)}">Sign in</a>` : `New here? <a href="/register?returnTo=${encodeURIComponent(safeReturn)}">Create an account</a>`}</p>
-            <p class="form-privacy-note">A standard customer account is created. Administrator access cannot be selected during registration.</p>
+            <p class="form-privacy-note">${register ? "We’ll verify that you own this email before asking you to create a password." : "Your email and password are checked by Supabase. Email confirmation is required for new accounts."}</p>
           </form></main>`;
     }
 
@@ -223,15 +224,27 @@
         const params = queryNow();
         const returnTo = params.get("returnTo");
         const safeReturn = returnTo && internal(returnTo) ? returnTo : "/account";
-        return `<main class="route-main route-auth">${pageHeading("Email confirmation", "Check your inbox.", "Enter the six-digit code from your signup email. You can also use the confirmation link in that email.", "Confirm email")}
+        return `<main class="route-main route-auth">${pageHeading("Email confirmation", "Check your inbox.", "Enter the six-digit code from your signup email. After verification, you’ll create your password.", "Confirm email")}
           <form class="editorial-form" id="confirmation-form" novalidate>
             <label>Email address<input name="email" type="email" autocomplete="email" value="${esc(pendingEmail)}" required /></label>
             <label>Six-digit code<input name="token" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="000000" required /></label>
-            <p class="form-privacy-note">The code is sent by Supabase Auth. If the email contains a confirmation button instead, open it and you’ll return here automatically.</p>
-            <div class="form-alert" role="alert" aria-live="polite">${codeRequestSent ? "Supabase accepted the request, but email delivery is not confirmed. Check your inbox, spam, and promotions folders; if nothing arrives, review the Supabase Auth SMTP and Confirm signup template settings." : ""}</div>
+            <p class="form-privacy-note">The code is sent by Supabase Auth. Never share it with anyone. If the email contains a confirmation link, open it to continue automatically.</p>
+            <div class="form-alert" role="alert" aria-live="polite">${codeRequestSent ? "Verification code requested. Check your inbox, spam, and promotions folders. Email delivery depends on the configured Supabase email provider." : ""}</div>
             <button class="button button-dark form-submit" type="submit">Verify email and continue</button>
             <button class="button button-light" id="resend-confirmation" type="button">${codeRequestSent ? "Resend verification code" : "Get verification code"}</button>
             <p class="form-switch"><a href="/register?returnTo=${encodeURIComponent(safeReturn)}">Use a different email</a> · <a href="/login?returnTo=${encodeURIComponent(safeReturn)}">Back to sign in</a></p>
+          </form></main>`;
+    }
+
+    function renderCreatePassword() {
+        const email = sessionStorage.getItem("atelier_pending_confirmation_email") || "";
+        return `<main class="route-main route-auth">${pageHeading("Finish account setup", "Create your password.", "Your email is verified. Choose a password to finish creating your account, then sign in with your email and password.", "New password")}
+          <form class="editorial-form" id="password-setup-form" novalidate>
+            <label>Email address<input type="email" value="${esc(email)}" autocomplete="email" readonly /></label>
+            <label>Password<span class="password-control"><input name="password" type="password" autocomplete="new-password" minlength="8" required /><button type="button" class="password-toggle" aria-label="Show password">Show</button></span></label><p class="field-error" data-error-for="password"></p>
+            <label>Confirm password<input name="passwordConfirm" type="password" autocomplete="new-password" minlength="8" required /></label><p class="field-error" data-error-for="passwordConfirm"></p>
+            <div class="form-alert" role="alert" aria-live="polite"></div>
+            <button class="button button-dark form-submit" type="submit">Create password</button>
           </form></main>`;
     }
 
@@ -375,13 +388,28 @@
         }
         if (path === "/login") return { html: renderAuth(false) };
         if (path === "/register") return { html: renderAuth(true) };
+        if (path === "/create-password") {
+            await api.authReady;
+            if (!api.token || sessionStorage.getItem("atelier_password_setup_pending") !== "true") {
+                navigate("/register", true);
+                return null;
+            }
+            return { html: renderCreatePassword() };
+        }
         if (path === "/confirm-email") {
             await api.authReady;
             if (api.token) {
                 const user = await verifiedUser();
                 if (user) {
-                    sessionStorage.removeItem("atelier_pending_confirmation_email");
                     const destination = queryNow().get("returnTo");
+                    if (queryNow().get("flow") === "register") {
+                        sessionStorage.setItem("atelier_password_setup_pending", "true");
+                        sessionStorage.setItem("atelier_pending_confirmation_email", user.email || "");
+                        sessionStorage.setItem("atelier_pending_signup_name", user.displayName || "");
+                        navigate(`/create-password${destination && internal(destination) ? `?returnTo=${encodeURIComponent(destination)}` : ""}`, true);
+                        return null;
+                    }
+                    sessionStorage.removeItem("atelier_pending_confirmation_email");
                     navigate(destination && internal(destination) ? destination : "/account", true);
                     return null;
                 }
@@ -449,12 +477,12 @@
     }
 
     function isConfirmationDeliveryError(error) {
-        return /error sending confirmation email|failed to send.{0,30}(confirmation|email)/i.test(String(error?.message || ""));
+        return /error sending (?:confirmation|magic link|email)|failed to send|email address not authorized|smtp/i.test(String(error?.message || ""));
     }
 
     function showConfirmationDeliveryError(form, error) {
         const alert = form.querySelector(".form-alert");
-        if (alert) alert.textContent = "Supabase could not send the signup confirmation email. Your account is not verified, so sign-in remains blocked. You can retry sending a code below; if it fails again, the Supabase Auth SMTP sender, verified domain, and Confirm signup email template need attention.";
+        if (alert) alert.textContent = "Supabase could not send the verification email. Your account is not verified. You can retry below; if it fails again, check the Auth SMTP sender, verified domain, and Magic Link template.";
         const retryButton = form.querySelector("#auth-resend-confirmation");
         if (retryButton) retryButton.hidden = false;
         console.warn("Supabase confirmation email send failed:", error?.message || error);
@@ -655,6 +683,7 @@
         app.querySelector("#auth-resend-confirmation")?.addEventListener("click", handleSignupConfirmationRetry);
         app.querySelector("#confirmation-form")?.addEventListener("submit", handleConfirmationSubmit);
         app.querySelector("#resend-confirmation")?.addEventListener("click", handleResendConfirmation);
+        app.querySelector("#password-setup-form")?.addEventListener("submit", handlePasswordSetupSubmit);
         app.querySelectorAll(".password-toggle").forEach(button => button.addEventListener("click", () => {
             const input = button.parentElement.querySelector("input");
             const reveal = input.type === "password";
@@ -716,34 +745,39 @@
         const button = form.querySelector("button[type=submit]");
         const mode = form.dataset.authMode;
         button.disabled = true;
-        button.textContent = mode === "register" ? "Creating your account…" : "Signing in…";
+        button.textContent = mode === "register" ? "Sending verification code…" : "Signing in…";
         try {
             const values = new FormData(form);
-            const result = mode === "register"
-                ? await api.register(String(values.get("displayName")).trim(), String(values.get("email")).trim(), String(values.get("password")))
-                : await api.login(String(values.get("email")).trim(), String(values.get("password")));
-            if (result.confirmationRequired) {
-                form.reset();
-                sessionStorage.setItem("atelier_pending_confirmation_email", String(values.get("email")).trim());
-                const returnTo = queryNow().get("returnTo");
-                navigate(`/confirm-email${returnTo && internal(returnTo) ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`, true);
+            const email = String(values.get("email")).trim();
+            if (mode === "login") {
+                const result = await api.login(email, String(values.get("password")));
+                await api.mergeGuestCart().catch(error => toast(`Signed in, but some bag items could not be merged: ${error.message}`, "error"));
+                toast(`Welcome back, ${result.user.displayName}.`);
+                const destination = queryNow().get("returnTo");
+                navigate(destination && internal(destination) ? destination : "/account", true);
                 return;
             }
-            await api.mergeGuestCart().catch(error => toast(`Signed in, but some bag items could not be merged: ${error.message}`, "error"));
-            toast(mode === "register" ? `Welcome to Dial & Form, ${result.user.displayName}.` : `Welcome back, ${result.user.displayName}.`);
-            const params = queryNow();
-            const destination = params.get("returnTo");
-            navigate(destination && internal(destination) ? destination : "/account", true);
+            const displayName = String(values.get("displayName")).trim();
+            sessionStorage.setItem("atelier_pending_signup_name", displayName);
+            await api.register(displayName, email);
+            sessionStorage.setItem("atelier_pending_confirmation_email", email);
+            sessionStorage.setItem("atelier_confirmation_code_request_email", email);
+            form.reset();
+            const returnTo = queryNow().get("returnTo");
+            navigate(`/confirm-email?flow=register${returnTo && internal(returnTo) ? `&returnTo=${encodeURIComponent(returnTo)}` : ""}`, true);
         } catch (error) {
             if (mode === "register" && isConfirmationDeliveryError(error)) {
-                const email = String(new FormData(form).get("email") || "").trim();
+                const values = new FormData(form);
+                const email = String(values.get("email") || "").trim();
+                const displayName = String(values.get("displayName") || "").trim();
                 if (email) sessionStorage.setItem("atelier_pending_confirmation_email", email);
+                if (displayName) sessionStorage.setItem("atelier_pending_signup_name", displayName);
                 showConfirmationDeliveryError(form, error);
             } else {
                 showApiErrors(form, error);
             }
             button.disabled = false;
-            button.textContent = mode === "register" ? "Create collector account" : "Sign in";
+            button.textContent = mode === "register" ? "Send verification code" : "Sign in";
         }
     }
 
@@ -761,7 +795,7 @@
             sessionStorage.setItem("atelier_pending_confirmation_email", email);
             sessionStorage.setItem("atelier_confirmation_code_request_email", email);
             const returnTo = queryNow().get("returnTo");
-            navigate(`/confirm-email${returnTo && internal(returnTo) ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`, true);
+            navigate(`/confirm-email?flow=register${returnTo && internal(returnTo) ? `&returnTo=${encodeURIComponent(returnTo)}` : ""}`, true);
         } catch (error) {
             if (alert) alert.textContent = isConfirmationDeliveryError(error)
                 ? "Supabase still cannot send the email. This needs a working Supabase Auth SMTP configuration and verified sender domain; no code was delivered."
@@ -778,10 +812,20 @@
         if (!form.reportValidity()) return;
         const button = form.querySelector("button[type=submit]");
         const values = new FormData(form);
+        const registerFlow = queryNow().get("flow") === "register";
         button.disabled = true;
         button.textContent = "Verifying code…";
         try {
-            await api.confirmSignup(String(values.get("email")).trim(), String(values.get("token")).trim());
+            const email = String(values.get("email")).trim();
+            const code = String(values.get("token")).trim();
+            await api.confirmSignup(email, code);
+            sessionStorage.removeItem("atelier_confirmation_code_request_email");
+            if (registerFlow) {
+                sessionStorage.setItem("atelier_password_setup_pending", "true");
+                const returnTo = queryNow().get("returnTo");
+                navigate(`/create-password${returnTo && internal(returnTo) ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`, true);
+                return;
+            }
             sessionStorage.removeItem("atelier_pending_confirmation_email");
             await api.mergeGuestCart().catch(error => toast(`Email confirmed, but some bag items could not be merged: ${error.message}`, "error"));
             toast("Email confirmed. You’re signed in.");
@@ -801,20 +845,51 @@
         clearFormErrors(form);
         if (!email?.reportValidity()) return;
         button.disabled = true;
-        button.textContent = "Requesting email…";
+        button.textContent = "Requesting code…";
         try {
             const normalizedEmail = String(email.value).trim();
             await api.resendSignupConfirmation(normalizedEmail);
             sessionStorage.setItem("atelier_confirmation_code_request_email", normalizedEmail);
-            form.querySelector(".form-alert").textContent = "Request submitted, but delivery is not confirmed. If no email arrives, check Resend → Emails and the Supabase Auth SMTP and Confirm signup template settings.";
+            form.querySelector(".form-alert").textContent = "Confirmation code requested. Check your inbox, spam, and promotions folders. If no email arrives, check the configured email provider’s delivery logs.";
             button.textContent = "Resend verification code";
         } catch (error) {
             form.querySelector(".form-alert").textContent = isConfirmationDeliveryError(error)
-                ? "Supabase could not send the confirmation email. No code was delivered. Check the Auth SMTP sender, verified sending domain, and Confirm signup template, then retry."
+                ? "Supabase could not send the email. No code was delivered. Check the Auth SMTP sender, verified domain, and Magic Link email template."
                 : (error.message || "The confirmation email could not be requested.");
             button.textContent = "Get verification code";
         } finally {
             button.disabled = false;
+        }
+    }
+
+    async function handlePasswordSetupSubmit(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        clearFormErrors(form);
+        if (!form.reportValidity()) return;
+        const values = new FormData(form);
+        const password = String(values.get("password"));
+        const passwordConfirm = String(values.get("passwordConfirm"));
+        if (password !== passwordConfirm) {
+            form.querySelector('[data-error-for="passwordConfirm"]').textContent = "Passwords do not match.";
+            return;
+        }
+        const button = form.querySelector("button[type=submit]");
+        button.disabled = true;
+        button.textContent = "Saving password…";
+        try {
+            await api.setAccountPassword(password);
+            sessionStorage.removeItem("atelier_password_setup_pending");
+            sessionStorage.removeItem("atelier_pending_confirmation_email");
+            sessionStorage.removeItem("atelier_confirmation_code_request_email");
+            sessionStorage.removeItem("atelier_pending_signup_name");
+            toast("Account ready. Sign in with your email and password.");
+            const destination = queryNow().get("returnTo");
+            navigate(`/login?registered=1${destination && internal(destination) ? `&returnTo=${encodeURIComponent(destination)}` : ""}`, true);
+        } catch (error) {
+            showApiErrors(form, error);
+            button.disabled = false;
+            button.textContent = "Create password";
         }
     }
 

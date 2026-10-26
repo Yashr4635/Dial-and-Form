@@ -133,7 +133,14 @@ Open `http://localhost:8004` in your web browser. The Python server serves the f
 
 ### 3. Connect Supabase Auth
 
-The same public project URL and publishable key are needed by both the backend and the local preview server. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in each process environment before starting it. The browser SDK is loaded only when both values are present. In Supabase Authentication settings, enable Email/password, keep email confirmation enabled, set the local Site URL to `http://localhost:8004`, and add `http://localhost:8004/**` to the allowed redirect URLs. Add your eventual production domain there later. V6 adds a nullable unique Supabase identity column; it preserves existing user IDs and their related orders, carts, and wishlists. Flyway applies it automatically at backend startup, so review and back up any persistent database before production rollout.
+The same public project URL and publishable key are needed by both the backend and the local preview server. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in each process environment before starting it. The browser SDK is loaded only when both values are present. The storefront uses this account flow:
+
+1. Existing users sign in with their email and password using Supabase Auth.
+2. New users submit their name and email, verify the emailed one-time code, then create and confirm a password. They are returned to the normal sign-in form.
+
+In Supabase Authentication settings, enable the Email provider and keep email confirmation enabled. Under Email Templates → Magic Link, include `{{ .Token }}` in the message to send the code required by the confirmation form. Set the local Site URL to `http://localhost:8004`; add `http://localhost:8004/**` and `https://dial-and-form-storefront.onrender.com/**` to the allowed redirect URLs. Configure a custom SMTP sender for delivery to arbitrary users: Supabase's built-in sender is restricted to project team addresses and is heavily rate-limited. Resend is only an optional SMTP delivery provider here; Supabase Auth still creates accounts, verifies codes, and checks passwords. If using the Resend domain `dialandform.in`, first finish its DNS verification, then configure its SMTP host, port, username, password, and a From address on that verified domain in Supabase Auth SMTP settings. Keep SMTP credentials server-side and never put them in the storefront or Git.
+
+V6 adds a nullable unique Supabase identity column; it preserves existing user IDs and their related orders, carts, and wishlists. Flyway applies it automatically at backend startup, so review and back up any persistent database before production rollout.
 
 When someone signs in with a confirmed email already present in the local user table, the backend links the Supabase ID to that same row. New Supabase accounts get a standard customer row. Passwords remain managed by Supabase; local commerce data continues to use the current backend and database.
 

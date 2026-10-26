@@ -192,37 +192,33 @@ class AtelierApiClient {
         return data;
     }
 
-    async register(displayName, email, password) {
+    async requestSignupCode(displayName, email) {
         await this.authReady;
         if (this.authStartupError) throw new Error(this.authStartupError);
-        if (this.supabase) {
-            const { data, error } = await this.supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    emailRedirectTo: `${window.location.origin}/confirm-email`,
-                    data: { display_name: displayName }
-                }
-            });
-            if (error) throw error;
-            if (!data.session) return { confirmationRequired: true, user: { displayName, email } };
-            this.applySupabaseSession(data.session);
-            this.user = await this.request("/users/me");
-            localStorage.setItem("atelier_user", JSON.stringify(this.user));
-            return { token: this.token, user: this.user };
-        }
-        const data = await this.request("/auth/register", {
-            method: "POST",
-            body: JSON.stringify({ displayName, email, password })
+        if (!this.supabase) throw new Error("Email verification is not configured for this site.");
+
+        const { data, error } = await this.supabase.auth.signInWithOtp({
+            email: email.trim(),
+            options: {
+                shouldCreateUser: true,
+                emailRedirectTo: `${window.location.origin}/confirm-email?flow=register`,
+                ...(displayName ? { data: { display_name: displayName.trim() } } : {})
+            }
         });
-        this.setAuth(data);
-        return data;
+        if (error) throw error;
+        if (data.session) {
+            // Email confirmation must remain enabled. Do not let a project
+            // configuration mistake silently skip the email ownership check.
+            await this.supabase.auth.signOut({ scope: "local" }).catch(() => {});
+            this.setAuth(null);
+            throw new Error("Email confirmation is disabled in Supabase. Enable it before allowing account registration.");
+        }
     }
 
-    async confirmSignup(email, token) {
+    async verifyEmailCode(email, token) {
         await this.authReady;
         if (this.authStartupError) throw new Error(this.authStartupError);
-        if (!this.supabase) throw new Error("Email confirmation is not configured for this preview.");
+        if (!this.supabase) throw new Error("Email verification is not configured for this site.");
 
         const { data, error } = await this.supabase.auth.verifyOtp({
             email: email.trim(),
@@ -230,7 +226,7 @@ class AtelierApiClient {
             type: "email"
         });
         if (error) throw error;
-        if (!data.session) throw new Error("The code was accepted, but no sign-in session was returned. Please sign in.");
+        if (!data.session) throw new Error("The code was accepted, but no sign-in session was returned. Please request a new code.");
 
         this.applySupabaseSession(data.session);
         this.user = await this.request("/users/me");
@@ -238,17 +234,38 @@ class AtelierApiClient {
         return { token: this.token, user: this.user };
     }
 
-    async resendSignupConfirmation(email) {
+    async setAccountPassword(password) {
         await this.authReady;
         if (this.authStartupError) throw new Error(this.authStartupError);
-        if (!this.supabase) throw new Error("Email confirmation is not configured for this preview.");
+        if (!this.supabase) throw new Error("Password setup is not configured for this site.");
+        if (!this.token) throw new Error("Verify your email code before creating a password.");
 
-        const { error } = await this.supabase.auth.resend({
-            type: "signup",
-            email: email.trim(),
-            options: { emailRedirectTo: `${window.location.origin}/confirm-email` }
-        });
+        const { error } = await this.supabase.auth.updateUser({ password });
         if (error) throw error;
+
+        // Create or link the local commerce profile while the verified Supabase
+        // session is still active, then return the user to the normal login form.
+        const profile = await this.request("/users/me");
+        try {
+            await this.supabase.auth.signOut({ scope: "local" }).catch(() => {});
+        } finally {
+            this.setAuth(null);
+        }
+        return profile;
+    }
+
+    async register(displayName, email) {
+        await this.requestSignupCode(displayName, email);
+        return { confirmationRequired: true, passwordSetupRequired: true, user: { displayName, email } };
+    }
+
+    async confirmSignup(email, token) {
+        return this.verifyEmailCode(email, token);
+    }
+
+    async resendSignupConfirmation(email) {
+        const displayName = sessionStorage.getItem("atelier_pending_signup_name") || "";
+        return this.requestSignupCode(displayName, email);
     }
 
     async logout() {

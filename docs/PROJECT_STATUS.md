@@ -4,7 +4,7 @@ Last evidence review: 2026-10-26. This is a staging status summary, not a launch
 
 ## Verified
 
-- Git remote is Yashr4635/Dial-and-Form; branch main is based on af22036c613cb9e451f4b4a3413ba1e42ce8cb82. The working tree also contains uncommitted frontend edits.
+- Git remote is Yashr4635/Dial-and-Form; branch main.
 - Render staging storefront and API URLs responded to read-only checks.
 - API health was UP and public catalog returned 17 Rolex references.
 - Catalog prices and stock remained null; records were not purchasable.
@@ -22,8 +22,8 @@ Last evidence review: 2026-10-26. This is a staging status summary, not a launch
 
 ## Confirmed defects and blockers
 
-- The previous homepage used category-filter links that returned empty lists. The current uncommitted index.html points these tiles to collection routes; this navigation has not yet been browser-tested or deployed.
-- The current uncommitted storefront.js removes the sign-in gate for catalog routes; the backend catalog API already allows anonymous reads. Confirm the intended public-browsing policy and verify the deployed behavior after deployment.
+- The previous homepage used category-filter links that returned empty lists. The October 27 source update points these tiles to Submariner, Cosmograph Daytona, and GMT-Master II collection routes; browser verification in staging is still needed.
+- Storefront routing checks for a verified user before rendering watches, collection, and brand routes, then redirects to sign-in with the requested route preserved. The catalog API still allows anonymous reads, so this gate applies only to the storefront UI.
 - Historical reports say OTP email was not delivered; no fresh email test established resolution.
 - No verified price, stock, production payment gateway or shipping service.
 - Brochure image rights remain uncleared; keep candidate files private.
@@ -31,10 +31,9 @@ Last evidence review: 2026-10-26. This is a staging status summary, not a launch
 - No production deployment, backup/restore, monitoring or performance test is verified.
 - No LICENSE file is present.
 
-## Working-tree changes and deployment gap
+## Current deployment gap
 
-- In addition to documentation, the working tree currently modifies index.html and js/storefront.js. These application edits are preserved and were not changed as part of the documentation work.
-- The latest staging checks are from 2026-10-26, before these uncommitted frontend edits. Do not assume the Render site reflects them until they are reviewed, committed, pushed and verified.
+- The latest staging checks are from 2026-10-26, before the October 27 homepage collection-link and sign-in-message updates. Recheck the Render site and test direct routes, post-login return behavior, and mobile layout before calling these changes verified.
 
 ## Deployment
 

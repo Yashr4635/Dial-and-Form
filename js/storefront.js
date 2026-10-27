@@ -204,12 +204,20 @@
         const params = queryNow();
         const safeReturn = params.get("returnTo") && params.get("returnTo").startsWith("/") && !params.get("returnTo").startsWith("//") ? params.get("returnTo") : "/account";
         const registeredMessage = !register && params.get("registered") === "1";
-        return `<main class="route-main route-auth">${pageHeading(register ? "Collector account" : "Welcome back", register ? "Begin your collection." : "Your collection awaits.", register ? "Verify your email first. You’ll create your password in the next step." : "Sign in with the email address and password you created.", register ? "Register" : "Sign in")}
+        const isCatalogGate = safeReturn.startsWith("/watches") || safeReturn.startsWith("/collections") || safeReturn.startsWith("/brands");
+        const eyebrow = isCatalogGate ? "Collector Access Required" : (register ? "Collector account" : "Welcome back");
+        const title = register
+            ? (isCatalogGate ? "Register to access the collection." : "Begin your collection.")
+            : (isCatalogGate ? "Sign in to access the collection." : "Your collection awaits.");
+        const description = register
+            ? (isCatalogGate ? "Create and verify your collector account first to unlock the Rolex collection and technical dossiers." : "Verify your email first. You’ll create your password in the next step.")
+            : (isCatalogGate ? "Sign in with your email and password to browse verified Rolex models and explore technical dossiers." : "Sign in with the email address and password you created.");
+        return `<main class="route-main route-auth">${pageHeading(eyebrow, title, description, register ? "Register" : "Sign in")}
           <form class="editorial-form" id="auth-form" data-auth-mode="${register ? "register" : "login"}" novalidate>
             ${register ? `<label>Full name<input name="displayName" autocomplete="name" minlength="2" maxlength="100" required /></label><p class="field-error" data-error-for="displayName"></p>` : ""}
             <label>Email address<input name="email" type="email" autocomplete="email" required /></label><p class="field-error" data-error-for="email"></p>
             ${register ? "" : `<label>Password<span class="password-control"><input name="password" type="password" autocomplete="current-password" minlength="8" required /><button type="button" class="password-toggle" aria-label="Show password">Show</button></span></label><p class="field-error" data-error-for="password"></p>`}
-            <div class="form-alert" role="alert" aria-live="polite">${registeredMessage ? "Your email is verified and your password is set. Sign in to continue." : ""}</div>
+            <div class="form-alert" role="alert" aria-live="polite">${registeredMessage ? "Your email is verified and your password is set. Sign in to continue." : (isCatalogGate && !register ? "Collector sign-in is required to view timepieces and technical specifications." : "")}</div>
             <button class="button button-dark form-submit" type="submit">${register ? "Send verification code" : "Sign in"}</button>
             ${register ? `<button class="button button-light" id="auth-resend-confirmation" type="button" hidden>Send confirmation code</button>` : ""}
             <p class="form-switch">${register ? `Already registered? <a href="/login?returnTo=${encodeURIComponent(safeReturn)}">Sign in</a>` : `New here? <a href="/register?returnTo=${encodeURIComponent(safeReturn)}">Create an account</a>`}</p>

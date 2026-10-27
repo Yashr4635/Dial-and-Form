@@ -11,7 +11,7 @@
 **Source:** [github.com/Yashr4635/Dial-and-Form](https://github.com/Yashr4635/Dial-and-Form)
 **Status:** Deployed staging prototype. It is not a production-ready store or an authorized Rolex retailer.
 
-The hosted URLs were last checked on 2026-10-26. The working tree contains uncommitted storefront changes, so the deployed site may not yet include them.
+The hosted URLs were last checked on 2026-10-26. The homepage collection links and sign-in messaging have since been updated in the source; recheck staging to confirm the latest deployment.
 
 ## Contents
 
@@ -70,7 +70,7 @@ Staging availability can change, and an HTTP response does not prove the full us
 ### Known limits
 
 - OTP email delivery has not passed a fresh end-to-end test; prior user screenshots showed delivery errors.
-- The prior homepage used three category filters that returned no products. The current uncommitted homepage change points those tiles to explicit collection routes; this updated navigation has not yet been browser-tested or deployed.
+- The prior homepage used three category filters that returned no products. The October 27 source update points those tiles to explicit Submariner, Cosmograph Daytona, and GMT-Master II collection routes; this navigation still needs browser verification in staging.
 - Full mobile/browser behavior and authenticated shopping journeys have not been independently verified.
 - No current verified selling prices or stock quantities are configured.
 - No live payment processor, real transaction, or shipping carrier is configured. Payment simulation is not a real payment.
@@ -260,7 +260,7 @@ V5 archives prior published catalog rows and imports Rolex records without delet
 
 Supabase Auth handles browser email OTP/password authentication. Spring Security protects customer and admin API operations and applies role checks to admin routes. Legacy API login/register routes remain. The API is stateless. Browser configuration includes only the Supabase publishable key; a service-role key must never be exposed.
 
-Catalog browsing is public in the current working tree, and the backend catalog API permits anonymous reads. The latest hosted-site check predates the uncommitted removal of storefront catalog gating, so deployed behavior still needs confirmation. OTP delivery, CORS from the deployed browser, and the full account lifecycle remain unverified.
+The storefront gates `/watches`, `/collections`, and `/brands` routes behind a verified sign-in and preserves the requested route for return after login. This is a frontend route gate: the catalog API itself permits anonymous reads. Decide whether that API policy is acceptable for the project. OTP delivery, CORS from the deployed browser, and the full account lifecycle remain unverified.
 
 ## Testing
 
@@ -283,7 +283,7 @@ No approved UI screenshots are currently stored in the repository. The 240 anima
 
 ## Roadmap
 
-1. Commit/deploy and browser-test the current collection-navigation and public-catalog changes.
+1. Browser-test collection navigation and the sign-in return flow in staging after the latest source changes deploy.
 2. Verify Supabase OTP delivery and the complete password/login flow.
 3. Test direct routes, back/forward navigation, responsive layouts, reduced motion and the original scroll animation in a browser.
 4. Validate V5/V6 against an isolated PostgreSQL 16 database with representative historical data.
